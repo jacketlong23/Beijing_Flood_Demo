@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>洪涝模拟结果查看</title>
+<link rel="stylesheet" href="lib/leaflet.css">
+<script src="lib/leaflet.js"></script>
+<script src="lib/proj4.js"></script>
+<script src="accounts.js"></script>
+<script src="enc_index.js"></script>
+<script src="data_index.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; font: 13px/1.5 "Microsoft YaHei", "PingFang SC", sans-serif; color: #222; }
+  #app { display: flex; height: 100%; }
+  #side { width: 360px; overflow-y: auto; border-right: 1px solid #ddd; background: #fafafa; }
+  #map { flex: 1; }
+  h1 { font-size: 15px; margin: 0; padding: 12px 14px; background: #1f3b57; color: #fff; }
+  section { padding: 10px 14px; border-bottom: 1px solid #e6e6e6; }
+  h2 { font-size: 13px; margin: 0 0 6px; color: #1f3b57; }
+  select { width: 100%; padding: 4px; font: inherit; }
+  .seg { display: flex; gap: 4px; flex-wrap: wrap; }
+  .seg button { flex: 1 1 auto; padding: 4px 6px; border: 1px solid #bbb; background: #fff; cursor: pointer; border-radius: 3px; font: inherit; }
+  .seg button.on { background: #1f3b57; color: #fff; border-color: #1f3b57; }
+  .legend div { display: flex; align-items: center; gap: 6px; }
+  .legend i { width: 18px; height: 12px; display: inline-block; border: 1px solid #0002; }
+  .ramp { height: 12px; border: 1px solid #0002; }
+  .btn { padding: 4px 10px; border: 1px solid #1f3b57; background: #fff; color: #1f3b57; border-radius: 3px; cursor: pointer; font: inherit; }
+  .btn.on { background: #c0392b; border-color: #c0392b; color: #fff; }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { padding: 3px 4px; border-bottom: 1px solid #eee; text-align: left; }
+  th { color: #666; font-weight: normal; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.pt:hover { background: #eef3f8; cursor: pointer; }
+  tr.preset td:first-child { font-weight: bold; }
+  .del { color: #c0392b; cursor: pointer; }
+  .notes { font-size: 12px; color: #666; padding-left: 16px; margin: 0; }
+  .pop table td { border: 0; padding: 1px 6px 1px 0; }
+  .pop b { font-size: 13px; }
+  .riskchip { display: inline-block; min-width: 18px; text-align: center; border-radius: 2px; color: #fff; }
+  #addHint, #loading { display: none; color: #c0392b; }
+  .leaflet-container.adding { cursor: crosshair; }
+  .pix { image-rendering: pixelated; }
+  .form input { width: 100%; margin: 2px 0; padding: 3px; font: inherit; }
+  .leaflet-pane.leaflet-labels-pane { pointer-events: none; }
+  #offline { display: none; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 1000;
+             background: #fff3cd; border: 1px solid #e0b400; padding: 4px 12px; border-radius: 3px; }
+  #mapWrap { flex: 1; position: relative; }
+  #mapWrap #map { position: absolute; inset: 0; }
+  #login { position: fixed; inset: 0; z-index: 5000; background: #1f3b57; display: none; align-items: center; justify-content: center; }
+  #login form { background: #fff; padding: 28px 32px; border-radius: 6px; width: 320px; box-shadow: 0 4px 24px #0006; }
+  #login h3 { margin: 0 0 16px; color: #1f3b57; font-size: 16px; }
+  #login input { width: 100%; padding: 7px; margin: 4px 0 10px; font: inherit; border: 1px solid #bbb; border-radius: 3px; }
+  #login button { width: 100%; padding: 8px; background: #1f3b57; color: #fff; border: 0; border-radius: 3px; font: inherit; cursor: pointer; }
+  #loginMsg { color: #c0392b; min-height: 1.5em; font-size: 12px; }
+  .help dt { font-weight: bold; margin-top: 4px; }
+  .help dd { margin: 0 0 0 1em; color: #555; font-size: 12px; }
+</style>
+</head>
+<body>
+<div id="login"><form id="loginForm" autocomplete="on">
+  <h3>洪涝模拟结果查看</h3>
+  <label>用户名<input id="lgUser" autocomplete="username" required></label>
+  <label>密码<input id="lgPw" type="password" autocomplete="current-password" required></label>
+  <div id="loginMsg"></div>
+  <button type="submit">登录</button>
+</form></div>
+<div id="app">
+  <aside id="side">
+    <h1>洪涝模拟结果查看（未校准）</h1>
+    <section>
+      <h2>降雨事件</h2>
+      <select id="dsSel"></select>
+      <div id="loading">加载中…</div>
+    </section>
+    <section>
+      <h2>情景</h2>
+      <div class="seg" id="scenSeg"></div>
+    </section>
+    <section>
+      <h2>图层</h2>
+      <div class="seg" id="layerSeg"></div>
+      <div style="margin-top:8px" class="row"><span>透明度</span><input type="range" id="opacity" min="0" max="1" step="0.05" value="0.8" style="flex:1"></div>
+      <div class="legend" id="legend" style="margin-top:6px"></div>
+    </section>
+    <section>
+      <h2>文物点位</h2>
+      <div class="row">
+        <button class="btn" id="addBtn">点选添加</button>
+        <label class="btn">导入 CSV/GeoJSON<input type="file" id="fileIn" accept=".csv,.geojson,.json" hidden></label>
+        <button class="btn" id="expCsv">导出 CSV</button>
+        <button class="btn" id="expGeo">导出 GeoJSON</button>
+        <button class="btn" id="clearAll">清空自添加</button>
+      </div>
+      <div class="row" style="margin-top:6px"><span>周边分析半径</span><div class="seg" id="radSeg" style="flex:1"></div></div>
+      <div id="addHint">在地图上点击放置点位，Esc 取消</div>
+      <table style="margin-top:8px">
+        <thead><tr><th>名称</th><th class="num">点位 hmax</th><th class="num">周边 hmax</th><th class="num">周边淹没</th><th class="num">周边风险</th><th></th></tr></thead>
+        <tbody id="ptBody"></tbody>
+      </table>
+    </section>
+    <section>
+      <h2>图层怎么看</h2>
+      <dl class="help" style="margin:0">
+        <dt>水深 / 流速</dt><dd>模拟期间每个网格出现过的最大值，不一定同时出现</dd>
+        <dt>h·v</dt><dd>同一时刻水深 × 流速的最大值，反映水流冲击力</dd>
+        <dt>风险等级 1–5</dt><dd>按水深、流速组合分级的试算结果，5 最高；0 级为分级表未覆盖的组合</dd>
+        <dt>周边</dt><dd>以点位为中心、按所选半径统计的最大水深、淹没占比（水深 &gt; 0.15 m）和最高风险</dd>
+        <dt>“—”</dt><dd>该处模拟为干（水深 &lt; 0.05 m）或不在模拟范围内</dd>
+      </dl>
+    </section>
+    <section>
+      <h2>说明与限制</h2>
+      <ul class="notes" id="notes"></ul>
+    </section>
+  </aside>
+  <div id="mapWrap"><div id="map"></div><div id="offline">底图需要联网；当前无法加载，结果图层与点位功能仍可使用</div></div>
+</div>
+
+<script>
+let IDX = window.FLOOD_INDEX, PRESETS = window.PRESET_POINTS || [];
+const ENCRYPTED = !!window.ACCOUNTS;
+
+// ---------- 加密版：账号密码 → PBKDF2 解开数据密钥 → AES-GCM 解密 ----------
+let DATA_KEY = null;
+const b64d = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const b64e = u => { let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode(...u.subarray(i, i + 0x8000)); return btoa(s); };
+async function decryptB64(s) {
+  const b = b64d(s);
+  return new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b.slice(0, 12) }, DATA_KEY, b.slice(12)));
+}
+async function setKey(raw) { DATA_KEY = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']); }
+async function unlock(user, pw) {
+  const h = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(user)))].map(x => x.toString(16).padStart(2, '0')).join('');
+  const a = window.ACCOUNTS[h];
+  if (!a) throw new Error('用户名或密码错误');
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+  const kek = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: b64d(a.salt), iterations: a.iter, hash: 'SHA-256' },
+    base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  let raw;
+  try { raw = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64d(a.iv) }, kek, b64d(a.wrapped))); }
+  catch { throw new Error('用户名或密码错误'); }
+  await setKey(raw);
+  sessionStorage.setItem('flood_key', b64e(raw));
+}
+async function loadEncIndex() {
+  const o = JSON.parse(new TextDecoder().decode(await decryptB64(window.ENC_INDEX)));
+  IDX = o.index; PRESETS = o.presets;
+}
+const RISK_COLORS = {0:'#9e9e9e',1:'#1a9850',2:'#91cf60',3:'#fee08b',4:'#fc8d59',5:'#d73027'};
+const KINDS = [['hmax','水深'],['vmax','流速'],['hv','h·v'],['risk_sim','风险(同时刻)'],['risk_max','风险(hmax×vmax)'],['rain','累计降雨'],['cuminf','累计下渗']];
+const SHARED = ['rain', 'cuminf'];   // 与情景无关的图层
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// ---------- 地图、Esri 底图与地名注记 ----------
+const map = L.map('map');
+map.createPane('labels').classList.add('leaflet-labels-pane');
+map.getPane('labels').style.zIndex = 650;
+const esri = (svc, opts = {}) => L.tileLayer(`https://server.arcgisonline.com/ArcGIS/rest/services/${svc}/MapServer/tile/{z}/{y}/{x}`,
+  { maxZoom: 19, attribution: 'Tiles &copy; Esri', ...opts });
+const bases = {
+  'Esri 影像': esri('World_Imagery'),
+  'Esri 地形': esri('World_Topo_Map'),
+  'Esri 街道': esri('World_Street_Map'),
+  'Esri 浅灰': esri('Canvas/World_Light_Gray_Base'),
+};
+bases['Esri 影像'].addTo(map);
+let tileErr = 0;
+Object.values(bases).forEach(b => {
+  b.on('tileerror', () => { if (++tileErr >= 4) offline.style.display = 'block'; });
+  b.on('tileload', () => { tileErr = 0; offline.style.display = 'none'; });
+});
+const placeLabels = esri('Reference/World_Boundaries_and_Places', { pane: 'labels' }).addTo(map);
+const roadLabels = esri('Reference/World_Transportation', { pane: 'labels' });
+const boundary = L.geoJSON(null, { style: { color: '#ffeb3b', weight: 1.5, fill: false }, interactive: false }).addTo(map);
+L.control.layers(bases, { '地名注记': placeLabels, '道路': roadLabels, '行政区界': boundary }, { position: 'topright' }).addTo(map);
+L.control.scale({ imperial: false }).addTo(map);
+map.setView([39.9, 116.4], 9);
+
+// ---------- 数据集加载 ----------
+proj4.defs('EPSG:32650', '+proj=utm +zone=50 +datum=WGS84 +units=m +no_defs');
+let D = null, G = {}, scen = null, kind = 'hmax', overlay = null;
+const cache = {};
+let firstOpen = true;
+function fillDatasets() { IDX.forEach(d => { const o = document.createElement('option'); o.value = d.id; o.textContent = d.name; dsSel.appendChild(o); }); }
+function loadScript(src) {
+  return new Promise((ok, fail) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => fail(new Error(src)); document.head.appendChild(s); });
+}
+async function inflate(b64) {
+  const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  const ds = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate'));
+  return new Uint8Array(await new Response(ds).arrayBuffer());
+}
+async function openDataset(id) {
+  loading.style.display = 'block';
+  try {
+    if (!cache[id]) {
+      if (!(window.FLOOD_DATA && window.FLOOD_DATA[id])) await loadScript(IDX.find(d => d.id === id).file);
+      if (ENCRYPTED && !(window.FLOOD_DATA && window.FLOOD_DATA[id])) {
+        const m = JSON.parse(new TextDecoder().decode(await decryptB64(window.ENC[id])));
+        for (const l of m.layers) l.png = URL.createObjectURL(new Blob([b64d(m.png_data[l.id])], { type: 'image/png' }));
+        delete m.png_data; delete window.ENC[id];
+        (window.FLOOD_DATA = window.FLOOD_DATA || {})[id] = m;
+      }
+      const meta = window.FLOOD_DATA[id], grids = {};
+      for (const [gid, g] of Object.entries(meta.grids)) {
+        const raw = await inflate(g.data);
+        grids[gid] = { ...g, arr: g.dtype === 'u16' ? new Uint16Array(raw.buffer) : new Int8Array(raw.buffer) };
+        delete g.data;
+      }
+      cache[id] = { meta, grids };
+    }
+    D = cache[id].meta; G = cache[id].grids;
+    if (!D.scenarios[scen]) scen = Object.keys(D.scenarios).slice(-1)[0];
+    if (!hasKind(kind)) kind = 'hmax';
+    boundary.clearLayers().addData(D.boundary);
+    if (firstOpen && PRESETS.length) { map.setView([PRESETS[0].lat, PRESETS[0].lng], 13); firstOpen = false; }
+    else map.fitBounds(boundary.getBounds());
+    notes.innerHTML = D.notes.map(n => `<li>${esc(n)}</li>`).join('');
+    render();
+  } catch (e) { alert('数据加载失败：' + e.message); }
+  loading.style.display = 'none';
+}
+dsSel.onchange = () => openDataset(dsSel.value);
+const lid = (s, k) => SHARED.includes(k) ? k : `${s}_${k}`;
+const hasKind = k => D.layers.some(l => l.id === lid(scen, k));
+
+// ---------- 结果图层与图例 ----------
+function drawSeg(el, items, cur, onPick) {
+  el.innerHTML = '';
+  items.forEach(([v, t]) => {
+    const b = document.createElement('button'); b.textContent = t; b.className = v === cur ? 'on' : '';
+    b.onclick = () => onPick(v); el.appendChild(b);
+  });
+}
+function render() {
+  drawSeg(radSeg, RADII, radius, v => { radius = v; renderPoints(); });
+  drawSeg(scenSeg, Object.entries(D.scenarios), scen, v => { scen = v; render(); });
+  drawSeg(layerSeg, KINDS.filter(([k]) => hasKind(k)), kind, v => { kind = v; render(); });
+  const def = D.layers.find(l => l.id === lid(scen, kind));
+  if (overlay) map.removeLayer(overlay);
+  overlay = L.imageOverlay(def.png, def.bounds, { opacity: +opacity.value, className: 'pix' }).addTo(map);
+  if (def.ramp) {
+    legend.innerHTML = `<div><b>${def.label}</b>&nbsp;(${def.unit})</div><div class="ramp" style="background:linear-gradient(90deg,${def.colors.join(',')})"></div>
+      <div class="row" style="justify-content:space-between"><span>${def.ramp[0]}</span><span>${def.ramp[1]}</span></div>`;
+  } else if (kind.startsWith('risk')) {
+    legend.innerHTML = `<div><b>${def.label}</b></div>` + def.legend.map(([k, c]) => `<div><i style="background:${c}"></i>${k === 0 ? '0 级（分级表未覆盖）' : k + ' 级'}</div>`).join('');
+  } else {
+    const L2 = def.legend;
+    legend.innerHTML = `<div><b>${def.label}</b>&nbsp;(${def.unit})</div>` + L2.map(([lo, c], i) =>
+      `<div><i style="background:${c}"></i>${i + 1 < L2.length ? `${lo} – ${L2[i + 1][0]}` : `≥ ${lo}`}</div>`).join('');
+  }
+  renderPoints();
+}
+opacity.oninput = () => overlay && overlay.setOpacity(+opacity.value);
+
+// ---------- 原始网格采样 ----------
+function sample(id, lat, lng) {
+  const g = G[id]; if (!g) return null;
+  const [x, y] = proj4('EPSG:4326', 'EPSG:32650', [lng, lat]);
+  const [a, , c, , e, f] = D.grid.transform;
+  const col = Math.floor((x - c) / a), row = Math.floor((y - f) / e);
+  if (col < 0 || row < 0 || col >= D.grid.width || row >= D.grid.height) return null;
+  const v = g.arr[row * D.grid.width + col];
+  return v === g.nodata ? null : v / g.scale;
+}
+function valuesAt(lat, lng, s) {
+  const o = {};
+  for (const k of ['hmax', 'vmax', 'hv', 'risk_sim', 'risk_max']) o[k] = sample(`${s}_${k}`, lat, lng);
+  return o;
+}
+let radius = 1000;
+const RADII = [[300, '300 m'], [500, '500 m'], [1000, '1 km'], [2000, '2 km']];
+// 半径内逐格统计（格心落在圆内的模拟单元）
+function zoneStats(lat, lng, s, R = radius) {
+  const [x0, y0] = proj4('EPSG:4326', 'EPSG:32650', [lng, lat]);
+  const [a, , c, , e, f] = D.grid.transform, W = D.grid.width, H = D.grid.height;
+  const c0 = Math.max(0, Math.floor((x0 - R - c) / a)), c1 = Math.min(W - 1, Math.floor((x0 + R - c) / a));
+  const r0 = Math.max(0, Math.floor((y0 + R - f) / e)), r1 = Math.min(H - 1, Math.floor((y0 - R - f) / e));
+  const gh = G[`${s}_hmax`], gv = G[`${s}_vmax`], gr = G[`${s}_risk_sim`], gm = G[`${s}_risk_max`], gR = G.rain;
+  const o = { n: 0, flooded: 0, hmax: null, vmax: null, risk_sim: null, risk_max: null, hi_risk_km2: 0 };
+  for (let r = r0; r <= r1; r++) for (let k = c0; k <= c1; k++) {
+    const x = c + (k + 0.5) * a, y = f + (r + 0.5) * e;
+    if ((x - x0) ** 2 + (y - y0) ** 2 > R * R) continue;
+    const i = r * W + k;
+    if (gR && gR.arr[i] === gR.nodata) continue;          // 模拟范围外
+    o.n++;
+    const h = gh.arr[i];
+    if (h === gh.nodata) continue;
+    const hv = h / gh.scale; if (hv >= 0.15) o.flooded++;
+    o.hmax = Math.max(o.hmax ?? 0, hv);
+    if (gv.arr[i] !== gv.nodata) o.vmax = Math.max(o.vmax ?? 0, gv.arr[i] / gv.scale);
+    const rs = gr.arr[i], rm = gm.arr[i];
+    if (rs !== gr.nodata) { o.risk_sim = Math.max(o.risk_sim ?? 0, rs); if (rs >= 4) o.hi_risk_km2 += Math.abs(a * e) / 1e6; }
+    if (rm !== gm.nodata) o.risk_max = Math.max(o.risk_max ?? 0, rm);
+  }
+  o.flood_frac = o.n ? o.flooded / o.n : null;
+  return o;
+}
+const pct = v => v == null ? '—' : (v * 100).toFixed(0) + '%';
+const fmt = (v, d = 2) => v == null ? '—' : v.toFixed(d);
+const chip = v => v == null ? '—' : `<span class="riskchip" style="background:${RISK_COLORS[v]}">${v}</span>`;
+function popupHtml(lat, lng, p) {
+  const rain = sample('rain', lat, lng), inf = sample('cuminf', lat, lng);
+  let h = `<div class="pop">${p ? `<b>${esc(p.name)}</b>${p.level ? ` · ${esc(p.level)}` : ''}<br>` : ''}${lat.toFixed(5)}, ${lng.toFixed(5)}<br>
+    累计降雨 ${fmt(rain, 0)} mm${inf != null ? `　累计下渗 ${fmt(inf, 0)} mm` : ''}
+    <table><tr><td></td><td>hmax m</td><td>vmax m/s</td><td>h·v</td><td>风险 同时刻</td><td>风险 hmax×vmax</td></tr>`;
+  for (const [s, name] of Object.entries(D.scenarios)) {
+    const r = valuesAt(lat, lng, s);
+    h += `<tr><td>${name}</td><td>${fmt(r.hmax)}</td><td>${fmt(r.vmax)}</td><td>${fmt(r.hv)}</td><td>${chip(r.risk_sim)}</td><td>${chip(r.risk_max)}</td></tr>`;
+  }
+  h += `</table><b style="font-size:12px">周边 ${radius >= 1000 ? radius / 1000 + ' km' : radius + ' m'} 范围</b>
+    <table><tr><td></td><td>最大水深 m</td><td>最大流速 m/s</td><td>淹没占比</td><td>最高风险 同时刻</td><td>最高风险 hmax×vmax</td><td>≥4级 km²</td></tr>`;
+  for (const [s, name] of Object.entries(D.scenarios)) {
+    const z = zoneStats(lat, lng, s);
+    h += `<tr><td>${name}</td><td>${fmt(z.hmax)}</td><td>${fmt(z.vmax)}</td><td>${pct(z.flood_frac)}</td><td>${chip(z.risk_sim)}</td><td>${chip(z.risk_max)}</td><td>${z.hi_risk_km2.toFixed(2)}</td></tr>`;
+  }
+  return h + `</table><span style="color:#888">“—” 表示干（&lt;0.05 m）或在模拟范围外${p && p.source ? `<br>坐标来源：${esc(p.source)}` : ''}</span></div>`;
+}
+
+// ---------- 文物点位（预置 + 自添加） ----------
+const PT_KEY = 'flood_viewer_points_v1';
+let points = JSON.parse(localStorage.getItem(PT_KEY) || '[]');
+const ptLayer = L.layerGroup().addTo(map);
+const save = () => localStorage.setItem(PT_KEY, JSON.stringify(points));
+const allPoints = () => PRESETS.map(p => ({ ...p, preset: true })).concat(points);
+function renderPoints() {
+  ptLayer.clearLayers(); ptBody.innerHTML = '';
+  allPoints().forEach(p => {
+    const r = valuesAt(p.lat, p.lng, scen), z = zoneStats(p.lat, p.lng, scen);
+    const col = z.risk_sim == null ? '#ffffff' : RISK_COLORS[z.risk_sim];
+    L.circle([p.lat, p.lng], { radius, color: col === '#ffffff' ? '#ddd' : col, weight: 2, dashArray: '6 4', fill: false, interactive: false }).addTo(ptLayer);
+    const m = L.circleMarker([p.lat, p.lng], { radius: p.preset ? 9 : 7, color: p.preset ? '#c0392b' : '#000', weight: p.preset ? 3 : 1.5, fillColor: col, fillOpacity: 1 })
+      .bindTooltip(p.name, { permanent: p.preset, direction: 'right', offset: [8, 0] })
+      .bindPopup(() => popupHtml(p.lat, p.lng, p), { maxWidth: 460 }).addTo(ptLayer);
+    const tr = document.createElement('tr'); tr.className = 'pt' + (p.preset ? ' preset' : '');
+    tr.innerHTML = `<td>${esc(p.name)}</td><td class="num">${fmt(r.hmax)}</td><td class="num">${fmt(z.hmax)}</td><td class="num">${pct(z.flood_frac)}</td><td class="num">${chip(z.risk_sim)}</td><td class="${p.preset ? '' : 'del'}" title="删除">${p.preset ? '' : '✕'}</td>`;
+    tr.onclick = ev => {
+      if (ev.target.classList.contains('del')) { points.splice(points.indexOf(p0(p)), 1); save(); renderPoints(); return; }
+      map.setView([p.lat, p.lng], Math.max(map.getZoom(), 15)); m.openPopup();
+    };
+    ptBody.appendChild(tr);
+  });
+}
+const p0 = p => points.find(q => q.lat === p.lat && q.lng === p.lng && q.name === p.name);
+let adding = false;
+function setAdding(on) {
+  adding = on; addBtn.classList.toggle('on', on); addHint.style.display = on ? 'block' : 'none';
+  map.getContainer().classList.toggle('adding', on);
+}
+addBtn.onclick = () => setAdding(!adding);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') setAdding(false); });
+map.on('click', e => {
+  if (!D) return;
+  const { lat, lng } = e.latlng;
+  if (!adding) { L.popup({ maxWidth: 460 }).setLatLng(e.latlng).setContent(popupHtml(lat, lng)).openOn(map); return; }
+  const div = document.createElement('div'); div.className = 'form';
+  div.innerHTML = `<b>新增文物点</b><input id="fName" placeholder="名称"><input id="fLevel" placeholder="保护级别（可选）"><button class="btn" id="fOk">保存</button>`;
+  const pop = L.popup().setLatLng(e.latlng).setContent(div).openOn(map);
+  div.querySelector('#fName').focus();
+  const ok = () => {
+    const name = div.querySelector('#fName').value.trim() || `点位${points.length + 1}`;
+    points.push({ name, level: div.querySelector('#fLevel').value.trim(), lat, lng }); save(); renderPoints(); map.closePopup(pop);
+  };
+  div.querySelector('#fOk').onclick = ok;
+  div.addEventListener('keydown', ev => { if (ev.key === 'Enter') ok(); });
+});
+
+// 导入：CSV 需含 名称/name、经度/lon/lng、纬度/lat 列（WGS84）；或 GeoJSON 点
+function parseCsv(text) {
+  const rows = text.replace(/^﻿/, '').split(/\r?\n/).filter(r => r.trim()).map(r => r.split(/,|\t/).map(s => s.trim().replace(/^"|"$/g, '')));
+  const hd = rows.shift().map(s => s.toLowerCase());
+  const idx = names => hd.findIndex(h => names.includes(h));
+  const iN = idx(['name', '名称', '文物名称']), iX = idx(['lon', 'lng', 'longitude', '经度', 'x']), iY = idx(['lat', 'latitude', '纬度', 'y']), iL = idx(['level', '级别', '保护级别']);
+  if (iX < 0 || iY < 0) throw new Error('未找到经度/纬度列');
+  return rows.map((r, k) => ({ name: iN >= 0 ? r[iN] : `点位${k + 1}`, level: iL >= 0 ? r[iL] : '', lng: +r[iX], lat: +r[iY] }))
+             .filter(p => isFinite(p.lat) && isFinite(p.lng));
+}
+function parseGeo(obj) {
+  const fs = obj.type === 'FeatureCollection' ? obj.features : [obj];
+  return fs.filter(f => f.geometry && f.geometry.type === 'Point').map((f, k) => {
+    const pr = f.properties || {};
+    return { name: pr.name || pr['名称'] || `点位${k + 1}`, level: pr.level || pr['保护级别'] || '', lng: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] };
+  });
+}
+fileIn.onchange = async () => {
+  const f = fileIn.files[0]; if (!f) return;
+  try {
+    const t = await f.text();
+    const add = /\.csv$/i.test(f.name) ? parseCsv(t) : parseGeo(JSON.parse(t));
+    points = points.concat(add); save(); renderPoints();
+    if (add.length) map.fitBounds(L.latLngBounds(add.map(p => [p.lat, p.lng])).pad(0.2));
+    alert(`已导入 ${add.length} 个点位`);
+  } catch (e) { alert('导入失败：' + e.message); }
+  fileIn.value = '';
+};
+function download(name, text, type) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click();
+}
+function enriched() {
+  return allPoints().map(p => {
+    const o = { name: p.name, level: p.level || '', lng: +p.lng.toFixed(6), lat: +p.lat.toFixed(6), event: D.name, rain_mm: sample('rain', p.lat, p.lng) };
+    if (G.cuminf) o.cuminf_mm = sample('cuminf', p.lat, p.lng);
+    for (const [s, name] of Object.entries(D.scenarios)) {
+      for (const [k, v] of Object.entries(valuesAt(p.lat, p.lng, s))) o[`${name}_点位_${k}`] = v;
+      const z = zoneStats(p.lat, p.lng, s);
+      for (const k of ['hmax', 'vmax', 'flood_frac', 'risk_sim', 'risk_max', 'hi_risk_km2']) o[`${name}_周边${radius}m_${k}`] = z[k];
+    }
+    return o;
+  });
+}
+expCsv.onclick = () => {
+  const rows = enriched(); if (!rows.length) return;
+  const cols = Object.keys(rows[0]);
+  const q = v => v == null ? '' : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v;
+  download(`文物点位_${D.id}.csv`, '﻿' + [cols.join(','), ...rows.map(r => cols.map(c => q(r[c])).join(','))].join('\n'), 'text/csv');
+};
+expGeo.onclick = () => {
+  const fc = { type: 'FeatureCollection', features: enriched().map(({ lng, lat, ...pr }) => ({ type: 'Feature', properties: pr, geometry: { type: 'Point', coordinates: [lng, lat] } })) };
+  download(`文物点位_${D.id}.geojson`, JSON.stringify(fc, null, 1), 'application/geo+json');
+};
+clearAll.onclick = () => { if (points.length && confirm('清空全部自添加点位？（预置点位保留）')) { points = []; save(); renderPoints(); } };
+
+function boot() { fillDatasets(); openDataset(IDX[0].id); }
+if (!ENCRYPTED) boot();
+else (async () => {
+  const saved = sessionStorage.getItem('flood_key');
+  if (saved) {
+    try { await setKey(b64d(saved)); await loadEncIndex(); boot(); return; } catch { sessionStorage.removeItem('flood_key'); }
+  }
+  login.style.display = 'flex'; lgUser.focus();
+  loginForm.onsubmit = async ev => {
+    ev.preventDefault(); loginMsg.textContent = '验证中…';
+    try { await unlock(lgUser.value.trim(), lgPw.value); await loadEncIndex(); login.style.display = 'none'; boot(); }
+    catch (e) { loginMsg.textContent = e.message; }
+  };
+})();
+</script>
+</body>
+</html>
