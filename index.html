@@ -36,6 +36,9 @@
   tr.pt:hover { background: #eef3f8; cursor: pointer; }
   tr.preset td:first-child { font-weight: bold; }
   .del { color: #c0392b; cursor: pointer; }
+  #ptWrap { max-height: 360px; overflow-y: auto; margin-top: 6px; }
+  #ptWrap thead th { position: sticky; top: 0; background: #fafafa; }
+  #ptFilter { width: 100%; padding: 3px; font: inherit; margin-top: 6px; }
   .notes { font-size: 12px; color: #666; padding-left: 16px; margin: 0; }
   .pop table td { border: 0; padding: 1px 6px 1px 0; }
   .pop b { font-size: 13px; }
@@ -96,10 +99,11 @@
       </div>
       <div class="row" style="margin-top:6px"><span>周边分析半径</span><div class="seg" id="radSeg" style="flex:1"></div></div>
       <div id="addHint">在地图上点击放置点位，Esc 取消</div>
-      <table style="margin-top:8px">
+      <input id="ptFilter" placeholder="搜索名称">
+      <div id="ptWrap"><table>
         <thead><tr><th>名称</th><th class="num">点位 hmax</th><th class="num">周边 hmax</th><th class="num">周边淹没</th><th class="num">周边风险</th><th></th></tr></thead>
         <tbody id="ptBody"></tbody>
-      </table>
+      </table></div>
     </section>
     <section>
       <h2>图层怎么看</h2>
@@ -108,6 +112,7 @@
         <dt>h·v</dt><dd>同一时刻水深 × 流速的最大值，反映水流冲击力</dd>
         <dt>风险等级 1–5</dt><dd>按水深、流速组合分级的试算结果，5 最高；0 级为分级表未覆盖的组合</dd>
         <dt>周边</dt><dd>以点位为中心、按所选半径统计的最大水深、淹没占比（水深 &gt; 0.15 m）和最高风险</dd>
+        <dt>点位列表</dt><dd>只列本事件模拟区内的点位，按周边风险、周边水深从高到低排列</dd>
         <dt>“—”</dt><dd>该处模拟为干（水深 &lt; 0.05 m）或不在模拟范围内</dd>
       </dl>
     </section>
@@ -328,14 +333,21 @@ const save = () => localStorage.setItem(PT_KEY, JSON.stringify(points));
 const allPoints = () => PRESETS.map(p => ({ ...p, preset: true })).concat(points);
 function renderPoints() {
   ptLayer.clearLayers(); ptBody.innerHTML = '';
-  allPoints().forEach(p => {
-    const r = valuesAt(p.lat, p.lng, scen), z = zoneStats(p.lat, p.lng, scen);
+  const q = ptFilter.value.trim();
+  const dists = new Set(D.boundary.features.map(f => f.properties.name));
+  const rows = allPoints().map(p => ({ p, r: valuesAt(p.lat, p.lng, scen), z: zoneStats(p.lat, p.lng, scen) }))
+    .filter(({ p, z }) => !p.preset || (dists.has(p.district) && z.n > 0));   // 预置点只显示本数据集区内、模拟范围内的
+  const rank = ({ p, z }) => [p.featured ? 1 : 0, p.preset ? 0 : 1, z.risk_sim ?? -1, z.hmax ?? -1];
+  rows.sort((a, b) => { const x = rank(a), y = rank(b); for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return y[i] - x[i]; return 0; });
+  rows.forEach(({ p, r, z }) => {
     const col = z.risk_sim == null ? '#ffffff' : RISK_COLORS[z.risk_sim];
-    L.circle([p.lat, p.lng], { radius, color: col === '#ffffff' ? '#ddd' : col, weight: 2, dashArray: '6 4', fill: false, interactive: false }).addTo(ptLayer);
-    const m = L.circleMarker([p.lat, p.lng], { radius: p.preset ? 9 : 7, color: p.preset ? '#c0392b' : '#000', weight: p.preset ? 3 : 1.5, fillColor: col, fillOpacity: 1 })
-      .bindTooltip(p.name, { permanent: p.preset, direction: 'right', offset: [8, 0] })
+    const big = !p.preset || p.featured;
+    if (big) L.circle([p.lat, p.lng], { radius, color: col === '#ffffff' ? '#ddd' : col, weight: 2, dashArray: '6 4', fill: false, interactive: false }).addTo(ptLayer);
+    const m = L.circleMarker([p.lat, p.lng], { radius: p.featured ? 9 : p.preset ? 6 : 7, color: p.preset ? '#c0392b' : '#000', weight: p.featured ? 3 : p.preset ? 2 : 1.5, fillColor: col, fillOpacity: 1 })
+      .bindTooltip(p.name, { permanent: !!p.featured, direction: 'right', offset: [8, 0] })
       .bindPopup(() => popupHtml(p.lat, p.lng, p), { maxWidth: 460 }).addTo(ptLayer);
-    const tr = document.createElement('tr'); tr.className = 'pt' + (p.preset ? ' preset' : '');
+    if (q && !p.name.includes(q)) return;
+    const tr = document.createElement('tr'); tr.className = 'pt' + (p.featured ? ' preset' : '');
     tr.innerHTML = `<td>${esc(p.name)}</td><td class="num">${fmt(r.hmax)}</td><td class="num">${fmt(z.hmax)}</td><td class="num">${pct(z.flood_frac)}</td><td class="num">${chip(z.risk_sim)}</td><td class="${p.preset ? '' : 'del'}" title="删除">${p.preset ? '' : '✕'}</td>`;
     tr.onclick = ev => {
       if (ev.target.classList.contains('del')) { points.splice(points.indexOf(p0(p)), 1); save(); renderPoints(); return; }
@@ -344,6 +356,7 @@ function renderPoints() {
     ptBody.appendChild(tr);
   });
 }
+ptFilter.oninput = renderPoints;
 const p0 = p => points.find(q => q.lat === p.lat && q.lng === p.lng && q.name === p.name);
 let adding = false;
 function setAdding(on) {
