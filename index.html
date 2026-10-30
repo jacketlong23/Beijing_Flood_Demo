@@ -60,6 +60,44 @@
   #loginMsg { color: #c0392b; min-height: 1.5em; font-size: 12px; }
   .help dt { font-weight: bold; margin-top: 4px; }
   .help dd { margin: 0 0 0 1em; color: #555; font-size: 12px; }
+  #evInfo { margin-top: 6px; font-size: 12px; }
+  #evInfo .k { color: #888; display: inline-block; width: 2.5em; }
+  #hyeto { display: block; width: 100%; height: 64px; margin-top: 4px; }
+  #hyetoTip { color: #555; min-height: 1.5em; font-variant-numeric: tabular-nums; }
+  .legend .km2 { margin-left: auto; color: #666; font-variant-numeric: tabular-nums; }
+  .done { color: #1a9850; margin-left: 3px; }
+  #distRow { margin-top: 6px; }
+  #distRow select { flex: 1; width: auto; }
+  .opIcon { background: #6a3d9a; border: 2px solid #fff; border-radius: 2px; transform: rotate(45deg); box-shadow: 0 0 2px #000a; }
+  .opIcon.miss { background: #fff; border-color: #6a3d9a; }
+  .opIcon.out { background: #bbb; }
+  #opWrap { max-height: 260px; overflow-y: auto; margin-top: 6px; }
+  .op { padding: 4px 2px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 12px; }
+  .op:hover { background: #eef3f8; }
+  .op .m { color: #888; }
+  .op .m .hit { color: #2c7fb8; } .op .m .miss { color: #c0392b; }
+  .op .t { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  #opFilter { flex: 1; padding: 3px; font: inherit; }
+  #opCat { width: auto; }
+  #ncTab tbody tr { cursor: pointer; }
+  #ncTab tbody tr:hover { background: #eef3f8; }
+  #ncTab tbody tr.on { background: #dbe6f1; font-weight: bold; }
+  .nc-note { font-size: 12px; color: #888; margin-top: 4px; }
+  #svWrap { position: fixed; inset: 0; z-index: 3000; background: #0005; display: none; align-items: flex-start; justify-content: center; overflow-y: auto; }
+  #svBox { background: #fff; width: min(620px, 96vw); margin: 3vh 0; border-radius: 6px; box-shadow: 0 4px 24px #0006; }
+  #svBox header { position: sticky; top: 0; background: #1f3b57; color: #fff; padding: 10px 16px; border-radius: 6px 6px 0 0; display: flex; align-items: center; gap: 8px; }
+  #svBox header b { flex: 1; font-size: 14px; }
+  #svForm { padding: 4px 16px 12px; }
+  #svForm fieldset { border: 0; border-top: 1px solid #e3e3e3; margin: 8px 0 0; padding: 6px 0 0; }
+  #svForm legend { color: #1f3b57; font-weight: bold; padding-right: 6px; }
+  #svForm .f { display: grid; grid-template-columns: 11em 1fr; gap: 4px 8px; align-items: center; margin: 4px 0; }
+  #svForm .f > span { color: #555; }
+  #svForm input[type=text], #svForm input[type=number], #svForm input[type=date], #svForm select, #svForm textarea { width: 100%; padding: 3px 5px; font: inherit; border: 1px solid #bbb; border-radius: 3px; }
+  #svForm textarea { height: 4.5em; resize: vertical; }
+  #svForm .opts { display: flex; flex-wrap: wrap; gap: 2px 12px; }
+  #svForm .opts label { white-space: nowrap; }
+  #svBox footer { position: sticky; bottom: 0; background: #fafafa; border-top: 1px solid #e3e3e3; padding: 8px 16px; display: flex; gap: 8px; justify-content: flex-end; }
+  #svBox footer .btn.pri { background: #1f3b57; color: #fff; }
 </style>
 </head>
 <body>
@@ -70,13 +108,22 @@
   <div id="loginMsg"></div>
   <button type="submit">登录</button>
 </form></div>
+<svg width="0" height="0" style="position:absolute"><defs><clipPath id="distClip" clipPathUnits="objectBoundingBox"><path id="distClipPath" clip-rule="evenodd"/></clipPath></defs></svg>
+<div id="svWrap"><div id="svBox">
+  <header><b id="svTitle"></b><button class="btn" id="svClose" style="background:#fff">关闭</button></header>
+  <form id="svForm" onsubmit="return false"></form>
+  <footer><span id="svTime" style="margin-right:auto;color:#888;font-size:12px;align-self:center"></span>
+    <button class="btn" id="svDel">清除本点记录</button><button class="btn pri" id="svSave">保存</button></footer>
+</div></div>
 <div id="app">
   <aside id="side">
     <h1>洪涝模拟结果查看（未校准）</h1>
     <section>
       <h2>降雨事件</h2>
       <select id="dsSel"></select>
+      <div class="row" id="distRow"><span>区</span><select id="distSel"></select></div>
       <div id="loading">加载中…</div>
+      <div id="evInfo"></div>
     </section>
     <section>
       <h2>情景</h2>
@@ -87,6 +134,15 @@
       <div class="seg" id="layerSeg"></div>
       <div style="margin-top:8px" class="row"><span>透明度</span><input type="range" id="opacity" min="0" max="1" step="0.05" value="0.8" style="flex:1"></div>
       <div class="legend" id="legend" style="margin-top:6px"></div>
+    </section>
+    <section id="ncSec" style="display:none">
+      <h2>临近预报试验</h2>
+      <div class="seg" id="ncSeg"></div>
+      <table id="ncTab" style="margin-top:6px">
+        <thead><tr><th>起报（北京时间）</th><th class="num">预报 / 参照雨量 mm</th><th class="num">新增积水 CSI</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="nc-note">500 m 临近预报与 CLDAS 分别驱动 3 h，以 CLDAS 结果为参照；面雨量为北京市平均</div>
     </section>
     <section>
       <h2>文物点位</h2>
@@ -106,18 +162,39 @@
       </table></div>
     </section>
     <section>
-      <h2>图层怎么看</h2>
+      <h2>调研信息 <span id="svCount" style="font-weight:normal;color:#888"></span></h2>
+      <div class="row">
+        <button class="btn" id="svExp">导出调研表 CSV</button>
+        <label class="btn">导入调研表<input type="file" id="svIn" accept=".csv" hidden></label>
+      </div>
+    </section>
+    <section>
+      <h2>舆情信息 <span id="opCount" style="font-weight:normal;color:#888"></span></h2>
+      <div class="row">
+        <label class="btn">导入<input type="file" id="opIn" accept=".csv,.json,.geojson" hidden></label>
+        <button class="btn" id="opExp">导出</button>
+        <button class="btn" id="opClear">清空</button>
+        <label style="margin-left:auto"><input type="checkbox" id="opAllT">全部时段</label>
+      </div>
+      <div class="row" style="margin-top:6px"><input id="opFilter" placeholder="关键词"><select id="opCat"></select></div>
+      <div class="row" style="margin-top:6px"><input id="wbKw" list="wbKwList" value="积水"><button class="btn" id="wbGo">微博检索</button></div>
+      <datalist id="wbKwList"><option>积水</option><option>内涝</option><option>被淹</option><option>冲毁</option><option>漫水</option><option>文物 受损</option></datalist>
+      <div id="opHit" style="margin-top:6px;font-size:12px"></div>
+      <div id="opWrap"></div>
+    </section>
+    <section>
+      <h2>图例说明</h2>
       <dl class="help" style="margin:0">
-        <dt>水深 / 流速</dt><dd>模拟期间每个网格出现过的最大值，不一定同时出现</dd>
-        <dt>h·v</dt><dd>同一时刻水深 × 流速的最大值，反映水流冲击力</dd>
-        <dt>风险等级 1–5</dt><dd>按水深、流速组合分级的试算结果，5 最高；0 级为分级表未覆盖的组合</dd>
-        <dt>周边</dt><dd>以点位为中心、按所选半径统计的最大水深、淹没占比（水深 &gt; 0.15 m）和最高风险</dd>
-        <dt>点位列表</dt><dd>只列本事件模拟区内的点位，按周边风险、周边水深从高到低排列</dd>
-        <dt>“—”</dt><dd>该处模拟为干（水深 &lt; 0.05 m）或不在模拟范围内</dd>
+        <dt>水深、流速</dt><dd>模拟期间各网格的最大值</dd>
+        <dt>h·v</dt><dd>同一时刻水深与流速乘积的最大值，表征水流冲击</dd>
+        <dt>风险等级</dt><dd>按同一时刻的水深、流速及二者乘积分 1–5 级，取全过程最高级</dd>
+        <dt>水域、闭洼</dt><dd>水库河湖与深 3 m 以上的封闭洼地；与河道一并不计入面积与周边统计</dd>
+        <dt>周边</dt><dd>点位所选半径内的最大水深、淹没比例（水深 &gt; 0.15 m）与最高风险等级，不含河道、水域和闭洼</dd>
+        <dt>—</dt><dd>未淹没或不在模拟范围内</dd>
       </dl>
     </section>
     <section>
-      <h2>说明与限制</h2>
+      <h2>数据与局限</h2>
       <ul class="notes" id="notes"></ul>
     </section>
   </aside>
@@ -155,7 +232,7 @@ async function loadEncIndex() {
   IDX = o.index; PRESETS = o.presets;
 }
 const RISK_COLORS = {0:'#9e9e9e',1:'#1a9850',2:'#91cf60',3:'#fee08b',4:'#fc8d59',5:'#d73027'};
-const KINDS = [['hmax','水深'],['vmax','流速'],['hv','h·v'],['risk_sim','风险(同时刻)'],['risk_max','风险(hmax×vmax)'],['rain','累计降雨'],['cuminf','累计下渗']];
+const KINDS = [['hmax','水深'],['vmax','流速'],['hv','h·v'],['risk_opt','风险等级'],['rain','累计降雨'],['cuminf','累计下渗']];
 const SHARED = ['rain', 'cuminf'];   // 与情景无关的图层
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -221,16 +298,92 @@ async function openDataset(id) {
     if (!D.scenarios[scen]) scen = Object.keys(D.scenarios).slice(-1)[0];
     if (!hasKind(kind)) kind = 'hmax';
     boundary.clearLayers().addData(D.boundary);
+    const dn = distNames();
+    if (!dn.includes(curDist)) curDist = '';
+    distRow.style.display = dn.length > 1 ? '' : 'none';
+    distSel.innerHTML = '<option value="">全市</option>' + dn.map(n => `<option${n === curDist ? ' selected' : ''}>${esc(n)}</option>`).join('');
+    styleBoundary();
     if (firstOpen && PRESETS.length) { map.setView([PRESETS[0].lat, PRESETS[0].lng], 13); firstOpen = false; }
-    else map.fitBounds(boundary.getBounds());
+    else fitDistrict();
     notes.innerHTML = D.notes.map(n => `<li>${esc(n)}</li>`).join('');
+    dsSel.value = id; renderEvent();
     render();
   } catch (e) { alert('数据加载失败：' + e.message); }
   loading.style.display = 'none';
 }
 dsSel.onchange = () => openDataset(dsSel.value);
+
+// ---------- 行政区筛选：选中区以外的结果隐藏（图层按区界裁剪），点位、图例面积、雨量随区切换 ----------
+let curDist = '';
+const distNames = () => D.boundary.features.map(f => f.properties.name);
+const ringsOf = f => f.geometry.type === 'Polygon' ? f.geometry.coordinates : f.geometry.coordinates.flat();
+function inRing(x, y, r) {
+  let c = false;
+  for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
+    const [xi, yi] = r[i], [xj, yj] = r[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c;
+  }
+  return c;
+}
+function districtOf(lat, lng) {
+  const f = D.boundary.features.find(f => ringsOf(f).reduce((c, r) => c !== inRing(lng, lat, r), false));
+  return f ? f.properties.name : null;
+}
+const merc = lat => Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360));
+function applyClip(bounds) {
+  const img = overlay && overlay.getElement(); if (!img) return;
+  if (!curDist) { img.style.clipPath = ''; return; }
+  const f = D.boundary.features.find(f => f.properties.name === curDist);
+  const [[s, w], [n, e]] = bounds, ys = merc(n) - merc(s);
+  distClipPath.setAttribute('d', ringsOf(f).map(r => 'M' + r.map(([x, y]) =>
+    `${((x - w) / (e - w)).toFixed(5)},${((merc(n) - merc(y)) / ys).toFixed(5)}`).join('L') + 'Z').join(''));
+  img.style.clipPath = 'url(#distClip)';
+}
+function styleBoundary() {
+  boundary.setStyle(f => !curDist ? { color: '#ffeb3b', weight: 1.5, opacity: 1 }
+    : f.properties.name === curDist ? { color: '#ffeb3b', weight: 3.5, opacity: 1 } : { color: '#ffeb3b', weight: 1, opacity: 0.45 });
+}
+function fitDistrict() {
+  const ly = curDist && boundary.getLayers().find(l => l.feature.properties.name === curDist);
+  map.fitBounds((ly || boundary).getBounds());
+}
+distSel.onchange = () => { curDist = distSel.value; styleBoundary(); fitDistrict(); renderEvent(); render(); };
 const lid = (s, k) => SHARED.includes(k) ? k : `${s}_${k}`;
 const hasKind = k => D.layers.some(l => l.id === lid(scen, k));
+
+// ---------- 事件时段与逐时面雨量 ----------
+const tFmt = s => { const d = new Date(s.replace(' ', 'T')); return `${d.getMonth() + 1}月${d.getDate()}日 ${String(d.getHours()).padStart(2, '0')}:00`; };
+function renderEvent() {
+  const R = D.rain; if (!R) { evInfo.innerHTML = ''; return; }
+  const hr = (curDist && R.hourly_by[curDist]) || R.hourly, area = curDist || R.area;
+  const sum = (i0, i1) => hr.slice(i0, i1).reduce((a, b) => a + b, 0);
+  const win = R.windows.map(w => `${tFmt(w.from)} — ${tFmt(w.to)}　${sum(w.i0, w.i1).toFixed(0)} mm`).join('<br><span class="k"></span>');
+  const n = hr.length, W = 330, H = 64, pad = 12, bw = W / n, mx = Math.max(...hr);
+  const y = v => H - pad - (H - pad - 2) * v / mx;
+  let svg = R.windows.map(w => `<rect x="${w.i0 * bw}" y="0" width="${(w.i1 - w.i0) * bw}" height="${H - pad}" fill="#eef3f8"/>`).join('');
+  svg += hr.map((v, k) => v > 0 ? `<rect x="${k * bw}" y="${y(v)}" width="${Math.max(bw - 0.3, 0.6)}" height="${H - pad - y(v)}" fill="#2c7fb8"/>` : '').join('');
+  svg += `<line x1="0" x2="${W}" y1="${H - pad}" y2="${H - pad}" stroke="#bbb"/>`;
+  const t0 = new Date(R.start.replace(' ', 'T'));
+  for (let k = 0; k <= n; k++) {                       // 每日 00:00 刻度
+    const d = new Date(t0.getTime() + k * 3600e3);
+    if (d.getHours() === 0) svg += `<line x1="${k * bw}" x2="${k * bw}" y1="${H - pad}" y2="${H - pad + 3}" stroke="#999"/>` +
+      (d.getDate() % 2 === 0 ? `<text x="${k * bw + 1}" y="${H - 1}" font-size="9" fill="#888">${d.getDate()}</text>` : '');
+  }
+  svg += `<text x="${W - 2}" y="9" font-size="9" fill="#888" text-anchor="end">${mx.toFixed(1)} mm/h</text>`;
+  evInfo.innerHTML = `<div><span class="k">降雨</span>${win}</div>
+    <div><span class="k">模拟</span>${tFmt(R.sim[0])} — ${tFmt(R.sim[1])}（${R.hours} h）</div>
+    <svg id="hyeto" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${svg}<g id="hyOp"></g><rect id="hyCur" width="${Math.max(bw, 1)}" height="${H - pad}" fill="#0003" style="display:none"/></svg>
+    <div id="hyetoTip">${esc(area)} 逐时面雨量</div>`;
+  const el = document.getElementById('hyeto'), cur = document.getElementById('hyCur'), tip = document.getElementById('hyetoTip');
+  el.onmousemove = ev => {
+    const r = el.getBoundingClientRect(), k = Math.min(n - 1, Math.max(0, Math.floor((ev.clientX - r.left) / r.width * n)));
+    const d = new Date(t0.getTime() + k * 3600e3);
+    cur.setAttribute('x', k * bw); cur.style.display = '';
+    const nOp = opVisible().filter(o => Math.floor((pTime(o.time) - t0) / 3600e3) === k).length;
+    tip.textContent = `${d.getMonth() + 1}月${d.getDate()}日 ${d.getHours()}—${d.getHours() + 1}时　${hr[k].toFixed(1)} mm${nOp ? `　舆情 ${nOp} 条` : ''}`;
+  };
+  el.onmouseleave = () => { cur.style.display = 'none'; tip.textContent = `${area} 逐时面雨量`; };
+}
 
 // ---------- 结果图层与图例 ----------
 function drawSeg(el, items, cur, onPick) {
@@ -241,24 +394,48 @@ function drawSeg(el, items, cur, onPick) {
   });
 }
 function render() {
-  drawSeg(radSeg, RADII, radius, v => { radius = v; renderPoints(); });
+  const pickRad = v => { radius = v; drawSeg(radSeg, RADII, radius, pickRad); renderPoints(); renderOpinions(); };
+  drawSeg(radSeg, RADII, radius, pickRad);
   drawSeg(scenSeg, Object.entries(D.scenarios), scen, v => { scen = v; render(); });
   drawSeg(layerSeg, KINDS.filter(([k]) => hasKind(k)), kind, v => { kind = v; render(); });
-  const def = D.layers.find(l => l.id === lid(scen, kind));
+  renderNowcast();
+  const def = D.layers.find(l => l.id === (isNc() ? kind : lid(scen, kind)));
   if (overlay) map.removeLayer(overlay);
   overlay = L.imageOverlay(def.png, def.bounds, { opacity: +opacity.value, className: 'pix' }).addTo(map);
+  applyClip(def.bounds);
   if (def.ramp) {
     legend.innerHTML = `<div><b>${def.label}</b>&nbsp;(${def.unit})</div><div class="ramp" style="background:linear-gradient(90deg,${def.colors.join(',')})"></div>
       <div class="row" style="justify-content:space-between"><span>${def.ramp[0]}</span><span>${def.ramp[1]}</span></div>`;
+  } else if (def.cats) {
+    legend.innerHTML = `<div><b>${def.label}</b></div>` + def.cats.map(([, t, c]) => `<div><i style="background:${c}"></i>${t}</div>`).join('');
   } else if (kind.startsWith('risk')) {
-    legend.innerHTML = `<div><b>${def.label}</b></div>` + def.legend.map(([k, c]) => `<div><i style="background:${c}"></i>${k === 0 ? '0 级（分级表未覆盖）' : k + ' 级'}</div>`).join('');
+    const km = (curDist && def.km2_by && def.km2_by[curDist]) || def.km2 || {};
+    legend.innerHTML = `<div class="row"><b>${def.label}</b><span class="km2">${esc(curDist || (D.rain ? D.rain.area : ''))} km²</span></div>` + def.legend
+      .filter(([k]) => k > 0)
+      .map(([k, c]) => `<div><i style="background:${c}"></i>${k} 级<span class="km2">${km[k] != null ? km[k].toFixed(1) : ''}</span></div>`).join('') +
+      `<div><i style="background:${D.water_color}"></i>水域（水库、河湖）</div>` + pitLegend();
   } else {
     const L2 = def.legend;
     legend.innerHTML = `<div><b>${def.label}</b>&nbsp;(${def.unit})</div>` + L2.map(([lo, c], i) =>
-      `<div><i style="background:${c}"></i>${i + 1 < L2.length ? `${lo} – ${L2[i + 1][0]}` : `≥ ${lo}`}</div>`).join('');
+      `<div><i style="background:${c}"></i>${i + 1 < L2.length ? `${lo} – ${L2[i + 1][0]}` : `≥ ${lo}`}</div>`).join('') + pitLegend();
   }
-  renderPoints();
+  renderPoints(); renderOpinions();
 }
+// ---------- 500 m 临近预报试验（仅 2024 年数据集）：起报时刻 × {临近预报, CLDAS 参照, 新增积水对比} ----------
+const NC_TAGS = [['fc', '临近预报'], ['ob', 'CLDAS 参照'], ['cont', '新增积水对比']];
+let ncKey = null, ncTag = 'cont';
+const isNc = () => kind.startsWith('nc_');
+function renderNowcast() {
+  const N = D.nowcast;
+  ncSec.style.display = N ? '' : 'none';
+  if (!N) return;
+  if (!ncKey) ncKey = N.items.reduce((a, b) => b.rise_ob_km2 > a.rise_ob_km2 ? b : a).key;   // 默认新增积水最多的一次
+  drawSeg(ncSeg, NC_TAGS, isNc() ? ncTag : null, v => { ncTag = v; kind = `nc_${ncKey}_${ncTag}`; render(); });
+  ncTab.tBodies[0].innerHTML = N.items.map(it => `<tr data-k="${it.key}" class="${isNc() && it.key === ncKey ? 'on' : ''}">
+    <td>${tFmt(it.start_local)}</td><td class="num">${it.rain_fc_mm.toFixed(1)} / ${it.rain_ob_mm.toFixed(1)}</td><td class="num">${it.rise_csi.toFixed(2)}</td></tr>`).join('');
+  [...ncTab.tBodies[0].rows].forEach(tr => tr.onclick = () => { ncKey = tr.dataset.k; kind = `nc_${ncKey}_${ncTag}`; render(); });
+}
+function pitLegend() { return `<div><i style="background:${D.pit_color}"></i>闭洼（地形异常、矿坑等）</div>`; }
 opacity.oninput = () => overlay && overlay.setOpacity(+opacity.value);
 
 // ---------- 原始网格采样 ----------
@@ -273,10 +450,10 @@ function sample(id, lat, lng) {
 }
 function valuesAt(lat, lng, s) {
   const o = {};
-  for (const k of ['hmax', 'vmax', 'hv', 'risk_sim', 'risk_max']) o[k] = sample(`${s}_${k}`, lat, lng);
+  for (const k of ['hmax', 'vmax', 'hv', 'risk_opt']) o[k] = sample(`${s}_${k}`, lat, lng);
   return o;
 }
-let radius = 1000;
+let radius = 300;
 const RADII = [[300, '300 m'], [500, '500 m'], [1000, '1 km'], [2000, '2 km']];
 // 半径内逐格统计（格心落在圆内的模拟单元）
 function zoneStats(lat, lng, s, R = radius) {
@@ -284,22 +461,22 @@ function zoneStats(lat, lng, s, R = radius) {
   const [a, , c, , e, f] = D.grid.transform, W = D.grid.width, H = D.grid.height;
   const c0 = Math.max(0, Math.floor((x0 - R - c) / a)), c1 = Math.min(W - 1, Math.floor((x0 + R - c) / a));
   const r0 = Math.max(0, Math.floor((y0 + R - f) / e)), r1 = Math.min(H - 1, Math.floor((y0 - R - f) / e));
-  const gh = G[`${s}_hmax`], gv = G[`${s}_vmax`], gr = G[`${s}_risk_sim`], gm = G[`${s}_risk_max`], gR = G.rain;
-  const o = { n: 0, flooded: 0, hmax: null, vmax: null, risk_sim: null, risk_max: null, hi_risk_km2: 0 };
+  const gh = G[`${s}_hmax`], gv = G[`${s}_vmax`], go = G[`${s}_risk_opt`], gR = G.rain;
+  const o = { n: 0, flooded: 0, hmax: null, vmax: null, risk_opt: null, hi_risk_km2: 0 };
   for (let r = r0; r <= r1; r++) for (let k = c0; k <= c1; k++) {
     const x = c + (k + 0.5) * a, y = f + (r + 0.5) * e;
     if ((x - x0) ** 2 + (y - y0) ** 2 > R * R) continue;
     const i = r * W + k;
     if (gR && gR.arr[i] === gR.nodata) continue;          // 模拟范围外
+    if (G.excl && G.excl.arr[i] > 0) continue;            // 1 河道、2 水域、3 闭洼 > 3 m
     o.n++;
     const h = gh.arr[i];
     if (h === gh.nodata) continue;
     const hv = h / gh.scale; if (hv >= 0.15) o.flooded++;
     o.hmax = Math.max(o.hmax ?? 0, hv);
     if (gv.arr[i] !== gv.nodata) o.vmax = Math.max(o.vmax ?? 0, gv.arr[i] / gv.scale);
-    const rs = gr.arr[i], rm = gm.arr[i];
-    if (rs !== gr.nodata) { o.risk_sim = Math.max(o.risk_sim ?? 0, rs); if (rs >= 4) o.hi_risk_km2 += Math.abs(a * e) / 1e6; }
-    if (rm !== gm.nodata) o.risk_max = Math.max(o.risk_max ?? 0, rm);
+    const ro = go.arr[i];
+    if (ro !== go.nodata) { o.risk_opt = Math.max(o.risk_opt ?? 0, ro); if (ro >= 4) o.hi_risk_km2 += Math.abs(a * e) / 1e6; }
   }
   o.flood_frac = o.n ? o.flooded / o.n : null;
   return o;
@@ -311,18 +488,23 @@ function popupHtml(lat, lng, p) {
   const rain = sample('rain', lat, lng), inf = sample('cuminf', lat, lng);
   let h = `<div class="pop">${p ? `<b>${esc(p.name)}</b>${p.level ? ` · ${esc(p.level)}` : ''}<br>` : ''}${lat.toFixed(5)}, ${lng.toFixed(5)}<br>
     累计降雨 ${fmt(rain, 0)} mm${inf != null ? `　累计下渗 ${fmt(inf, 0)} mm` : ''}
-    <table><tr><td></td><td>hmax m</td><td>vmax m/s</td><td>h·v</td><td>风险 同时刻</td><td>风险 hmax×vmax</td></tr>`;
+    ${sample('excl', lat, lng) === 3 ? '<br><span style="color:#c0392b">该格为闭洼（地形异常或矿坑），积水不代表地面淹没</span>' : ''}
+    <table><tr><td></td><td>hmax m</td><td>vmax m/s</td><td>h·v</td><td>风险等级</td></tr>`;
   for (const [s, name] of Object.entries(D.scenarios)) {
     const r = valuesAt(lat, lng, s);
-    h += `<tr><td>${name}</td><td>${fmt(r.hmax)}</td><td>${fmt(r.vmax)}</td><td>${fmt(r.hv)}</td><td>${chip(r.risk_sim)}</td><td>${chip(r.risk_max)}</td></tr>`;
+    h += `<tr><td>${name}</td><td>${fmt(r.hmax)}</td><td>${fmt(r.vmax)}</td><td>${fmt(r.hv)}</td><td>${chip(r.risk_opt)}</td></tr>`;
   }
   h += `</table><b style="font-size:12px">周边 ${radius >= 1000 ? radius / 1000 + ' km' : radius + ' m'} 范围</b>
-    <table><tr><td></td><td>最大水深 m</td><td>最大流速 m/s</td><td>淹没占比</td><td>最高风险 同时刻</td><td>最高风险 hmax×vmax</td><td>≥4级 km²</td></tr>`;
+    <table><tr><td></td><td>最大水深 m</td><td>最大流速 m/s</td><td>淹没占比</td><td>最高风险等级</td><td>≥4级 km²</td></tr>`;
   for (const [s, name] of Object.entries(D.scenarios)) {
     const z = zoneStats(lat, lng, s);
-    h += `<tr><td>${name}</td><td>${fmt(z.hmax)}</td><td>${fmt(z.vmax)}</td><td>${pct(z.flood_frac)}</td><td>${chip(z.risk_sim)}</td><td>${chip(z.risk_max)}</td><td>${z.hi_risk_km2.toFixed(2)}</td></tr>`;
+    h += `<tr><td>${name}</td><td>${fmt(z.hmax)}</td><td>${fmt(z.vmax)}</td><td>${pct(z.flood_frac)}</td><td>${chip(z.risk_opt)}</td><td>${z.hi_risk_km2.toFixed(2)}</td></tr>`;
   }
-  return h + `</table><span style="color:#888">“—” 表示干（&lt;0.05 m）或在模拟范围外${p && p.source ? `<br>坐标来源：${esc(p.source)}` : ''}</span></div>`;
+  const near = opVisible().filter(o => dist(lat, lng, o.lat, o.lng) <= radius);
+  if (near.length) h += `</table><b style="font-size:12px">周边舆情 ${near.length} 条</b><table>` + near.slice(0, 3).map(o =>
+    `<tr><td style="white-space:nowrap;color:#888">${esc(fmtT(o.time))}</td><td>${esc(o.content.slice(0, 40))}${o.content.length > 40 ? '…' : ''}</td></tr>`).join('');
+  return h + `</table><span style="color:#888">“—”：未淹没或在模拟范围外${p && p.source ? `<br>坐标来源：${esc(p.source)}` : ''}</span>` +
+    (p ? `<div style="margin-top:6px"><button class="btn" onclick="openSurvey(${allPoints().findIndex(q => ptKey(q) === ptKey(p))})">调研信息${survey[ptKey(p)] ? ' ✓' : ''}</button></div>` : '') + '</div>';
 }
 
 // ---------- 文物点位（预置 + 自添加） ----------
@@ -336,11 +518,15 @@ function renderPoints() {
   const q = ptFilter.value.trim();
   const dists = new Set(D.boundary.features.map(f => f.properties.name));
   const rows = allPoints().map(p => ({ p, r: valuesAt(p.lat, p.lng, scen), z: zoneStats(p.lat, p.lng, scen) }))
-    .filter(({ p, z }) => !p.preset || (dists.has(p.district) && z.n > 0));   // 预置点只显示本数据集区内、模拟范围内的
-  const rank = ({ p, z }) => [p.featured ? 1 : 0, p.preset ? 0 : 1, z.risk_sim ?? -1, z.hmax ?? -1];
+    .filter(({ p, z }) => {                      // 预置点只显示本数据集区内、模拟范围内的；选了区则只显示该区
+      const d = p.district || districtOf(p.lat, p.lng);
+      if (curDist && d !== curDist) return false;
+      return !p.preset || (dists.has(d) && z.n > 0);
+    });
+  const rank = ({ p, z }) => [p.featured ? 1 : 0, p.preset ? 0 : 1, z.risk_opt ?? -1, z.hmax ?? -1];
   rows.sort((a, b) => { const x = rank(a), y = rank(b); for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return y[i] - x[i]; return 0; });
   rows.forEach(({ p, r, z }) => {
-    const col = z.risk_sim == null ? '#ffffff' : RISK_COLORS[z.risk_sim];
+    const col = z.risk_opt == null ? '#ffffff' : RISK_COLORS[z.risk_opt];
     const big = !p.preset || p.featured;
     if (big) L.circle([p.lat, p.lng], { radius, color: col === '#ffffff' ? '#ddd' : col, weight: 2, dashArray: '6 4', fill: false, interactive: false }).addTo(ptLayer);
     const m = L.circleMarker([p.lat, p.lng], { radius: p.featured ? 9 : p.preset ? 6 : 7, color: p.preset ? '#c0392b' : '#000', weight: p.featured ? 3 : p.preset ? 2 : 1.5, fillColor: col, fillOpacity: 1 })
@@ -348,7 +534,7 @@ function renderPoints() {
       .bindPopup(() => popupHtml(p.lat, p.lng, p), { maxWidth: 460 }).addTo(ptLayer);
     if (q && !p.name.includes(q)) return;
     const tr = document.createElement('tr'); tr.className = 'pt' + (p.featured ? ' preset' : '');
-    tr.innerHTML = `<td>${esc(p.name)}</td><td class="num">${fmt(r.hmax)}</td><td class="num">${fmt(z.hmax)}</td><td class="num">${pct(z.flood_frac)}</td><td class="num">${chip(z.risk_sim)}</td><td class="${p.preset ? '' : 'del'}" title="删除">${p.preset ? '' : '✕'}</td>`;
+    tr.innerHTML = `<td>${esc(p.name)}${survey[ptKey(p)] ? '<span class="done" title="已有调研信息">✓</span>' : ''}</td><td class="num">${fmt(r.hmax)}</td><td class="num">${fmt(z.hmax)}</td><td class="num">${pct(z.flood_frac)}</td><td class="num">${chip(z.risk_opt)}</td><td class="${p.preset ? '' : 'del'}" title="删除">${p.preset ? '' : '✕'}</td>`;
     tr.onclick = ev => {
       if (ev.target.classList.contains('del')) { points.splice(points.indexOf(p0(p)), 1); save(); renderPoints(); return; }
       map.setView([p.lat, p.lng], Math.max(map.getZoom(), 15)); m.openPopup();
@@ -383,7 +569,7 @@ map.on('click', e => {
 
 // 导入：CSV 需含 名称/name、经度/lon/lng、纬度/lat 列（WGS84）；或 GeoJSON 点
 function parseCsv(text) {
-  const rows = text.replace(/^﻿/, '').split(/\r?\n/).filter(r => r.trim()).map(r => r.split(/,|\t/).map(s => s.trim().replace(/^"|"$/g, '')));
+  const rows = parseCsvFull(text).map(r => r.map(s => s.trim()));
   const hd = rows.shift().map(s => s.toLowerCase());
   const idx = names => hd.findIndex(h => names.includes(h));
   const iN = idx(['name', '名称', '文物名称']), iX = idx(['lon', 'lng', 'longitude', '经度', 'x']), iY = idx(['lat', 'latitude', '纬度', 'y']), iL = idx(['level', '级别', '保护级别']);
@@ -419,7 +605,7 @@ function enriched() {
     for (const [s, name] of Object.entries(D.scenarios)) {
       for (const [k, v] of Object.entries(valuesAt(p.lat, p.lng, s))) o[`${name}_点位_${k}`] = v;
       const z = zoneStats(p.lat, p.lng, s);
-      for (const k of ['hmax', 'vmax', 'flood_frac', 'risk_sim', 'risk_max', 'hi_risk_km2']) o[`${name}_周边${radius}m_${k}`] = z[k];
+      for (const k of ['hmax', 'vmax', 'flood_frac', 'risk_opt', 'hi_risk_km2']) o[`${name}_周边${radius}m_${k}`] = z[k];
     }
     return o;
   });
@@ -435,6 +621,277 @@ expGeo.onclick = () => {
   download(`文物点位_${D.id}.geojson`, JSON.stringify(fc, null, 1), 'application/geo+json');
 };
 clearAll.onclick = () => { if (points.length && confirm('清空全部自添加点位？（预置点位保留）')) { points = []; save(); renderPoints(); } };
+
+// ---------- 舆情信息（微博等平台帖子，由导入文件提供；只存本机浏览器） ----------
+// 字段：时间、平台、类别、内容、地点、经度、纬度（WGS84）、链接；无坐标的帖子不能上图，导入时跳过
+const OP_KEY = 'flood_viewer_opinion_v1';
+let posts = JSON.parse(localStorage.getItem(OP_KEY) || '[]');
+const opLayer = L.layerGroup().addTo(map);
+const opIcon = L.divIcon({ className: 'opIcon', iconSize: [11, 11] });
+const opIconBy = { miss: L.divIcon({ className: 'opIcon miss', iconSize: [11, 11] }), out: L.divIcon({ className: 'opIcon out', iconSize: [11, 11] }) };
+const opSave = () => localStorage.setItem(OP_KEY, JSON.stringify(posts));
+const pTime = s => new Date(String(s).trim().replace(/\//g, '-').replace(' ', 'T'));
+const fmtT = s => { const d = pTime(s); return isNaN(d) ? String(s) : `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+const dist = (la1, lo1, la2, lo2) => { const r = Math.PI / 180, x = (lo2 - lo1) * r * Math.cos((la1 + la2) / 2 * r), y = (la2 - la1) * r; return 6371e3 * Math.hypot(x, y); };
+const safeUrl = u => /^https?:\/\//i.test(u || '') ? u : '';
+function opVisible() {
+  if (!D) return [];
+  const q = opFilter.value.trim(), cat = opCat.value;
+  const [t0, t1] = D.rain ? D.rain.sim.map(pTime) : [null, null];
+  return posts.filter(o => {
+    const t = pTime(o.time);
+    if (!opAllT.checked && t0 && !(t >= t0 && t < t1)) return false;
+    if (cat && o.category !== cat) return false;
+    if (q && !`${o.content} ${o.place} ${o.platform} ${o.category}`.includes(q)) return false;
+    const d = districtOf(o.lat, o.lng);
+    return curDist ? d === curDist : !!d;
+  }).sort((a, b) => pTime(a.time) - pTime(b.time));
+}
+// 舆情与模拟对照：帖子周边 radius 内（不含河道、水域、闭洼）有 hmax ≥ 0.15 m 的格即“命中”；只统计模拟时段内、模拟范围内的帖子。
+// 帖子只报告“有水”，没有“无水”的样本，命中率相当于检出率，不能反映空报。
+function opMatch(o) {
+  const [t0, t1] = D.rain ? D.rain.sim.map(pTime) : [null, null], t = pTime(o.time);
+  if (t0 && !(t >= t0 && t < t1)) return { use: false, why: '不在模拟时段' };
+  const z = zoneStats(o.lat, o.lng, scen);
+  if (!z.n) return { use: false, why: '不在模拟范围' };
+  return { use: true, hit: z.flooded > 0, hmax: z.hmax, frac: z.flood_frac };
+}
+const rTxt = () => radius >= 1000 ? radius / 1000 + ' km' : radius + ' m';
+const opMatchTxt = m => !m.use ? m.why : m.hit ? `模拟淹没 ${fmt(m.hmax)} m` : '模拟未淹没';
+function opPopup(o) {
+  const near = allPoints().filter(p => dist(p.lat, p.lng, o.lat, o.lng) <= radius);
+  const u = safeUrl(o.url);
+  const mt = opMatch(o);
+  return `<div class="pop"><b>${esc(o.platform || '')}${o.category ? ' · ' + esc(o.category) : ''}</b><br>
+    <span style="color:#888">${esc(fmtT(o.time))}${o.place ? ' · ' + esc(o.place) : ''}</span>
+    <div style="margin:4px 0;max-width:340px">${esc(o.content)}</div>${u ? `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">原文</a><br>` : ''}
+    周边 ${rTxt()} ${mt.use ? (mt.hit ? `模拟最大水深 ${fmt(mt.hmax)} m，淹没占比 ${pct(mt.frac)}` : '模拟未淹没（hmax < 0.15 m）') : '：' + mt.why}<br>
+    <span style="color:#888">周边 ${rTxt()} 内文物：${near.length ? near.map(p => esc(p.name)).join('、') : '无'}</span></div>`;
+}
+function renderOpinions() {
+  opLayer.clearLayers(); opWrap.innerHTML = '';
+  const cats = [...new Set(posts.map(o => o.category).filter(Boolean))];
+  const cur = opCat.value;
+  opCat.innerHTML = '<option value="">全部类别</option>' + cats.map(c => `<option${c === cur ? ' selected' : ''}>${esc(c)}</option>`).join('');
+  const vis = opVisible(), mts = vis.map(opMatch), used = mts.filter(m => m.use), nHit = used.filter(m => m.hit).length;
+  opCount.textContent = posts.length ? `${vis.length} / ${posts.length}` : '';
+  opHit.innerHTML = used.length ? `模拟命中 <b>${nHit} / ${used.length}</b>（${pct(nHit / used.length)}）· 周边 ${rTxt()}` : '';
+  vis.forEach((o, i) => {
+    const mt = mts[i], cls = !mt.use ? 'out' : mt.hit ? '' : 'miss';
+    const m = L.marker([o.lat, o.lng], { icon: cls ? opIconBy[cls] : opIcon, zIndexOffset: -100 }).bindPopup(() => opPopup(o), { maxWidth: 380 }).addTo(opLayer);
+    const div = document.createElement('div'); div.className = 'op';
+    div.innerHTML = `<div class="m">${esc(fmtT(o.time))} · ${esc(o.platform || '')}${o.category ? ' · ' + esc(o.category) : ''} · <span class="${mt.use ? (mt.hit ? 'hit' : 'miss') : ''}">${opMatchTxt(mt)}</span></div><div class="t">${esc(o.content)}</div>`;
+    div.onclick = () => { map.setView([o.lat, o.lng], Math.max(map.getZoom(), 14)); m.openPopup(); };
+    opWrap.appendChild(div);
+  });
+  const g = document.getElementById('hyOp');            // 降雨过程线上的帖子时刻
+  if (g && D.rain) {
+    const t0 = pTime(D.rain.start), n = D.rain.hourly.length, bw = 330 / n;
+    g.innerHTML = vis.map(o => (pTime(o.time) - t0) / 3600e3).filter(k => k >= 0 && k < n)
+      .map(k => `<path d="M${k * bw - 2.5},0 L${k * bw + 2.5},0 L${k * bw},4 Z" fill="#6a3d9a"/>`).join('');
+  }
+}
+opFilter.oninput = opCat.onchange = opAllT.onchange = () => renderOpinions();
+// 微博高级搜索：当前区（或北京）+ 关键词，时段为降雨开始至雨停后 2 天；在本机浏览器打开，结果需人工核实后整理成 CSV 导入
+const wbDate = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}-${d.getHours()}`;
+function wbUrl() {
+  const w = D.rain.windows, t0 = pTime(w[0].from), t1 = new Date(pTime(w.at(-1).to).getTime() + 48 * 3600e3);
+  const q = `${curDist ? curDist.replace(/区$/, '') : '北京'} ${wbKw.value.trim() || '积水'}`;
+  return `https://s.weibo.com/weibo?q=${encodeURIComponent(q)}&timescope=custom:${wbDate(t0)}:${wbDate(t1)}`;
+}
+wbGo.onclick = () => { if (D && D.rain) window.open(wbUrl(), '_blank', 'noopener'); };
+const OP_COLS = { time: ['时间', 'time', '发布时间'], platform: ['平台', 'platform', '来源'], category: ['类别', 'category', '分类'],
+  content: ['内容', 'content', '正文', 'text'], place: ['地点', 'place', '位置'], lng: ['经度', 'lon', 'lng', 'longitude'],
+  lat: ['纬度', 'lat', 'latitude'], url: ['链接', 'url', 'link'] };
+function opFromObj(r) {
+  const o = {};
+  for (const [k, names] of Object.entries(OP_COLS)) { const key = names.find(n => r[n] != null && String(r[n]).trim() !== ''); o[k] = key ? String(r[key]).trim() : ''; }
+  o.lat = +o.lat; o.lng = +o.lng;
+  return o;
+}
+opIn.onchange = async () => {
+  const f = opIn.files[0]; if (!f) return;
+  try {
+    const text = await f.text(); let recs;
+    if (/\.csv$/i.test(f.name)) {
+      const rows = parseCsvFull(text), head = rows.shift().map(h => h.trim().toLowerCase());
+      recs = rows.map(r => opFromObj(Object.fromEntries(head.map((h, i) => [h, r[i]]))));
+    } else {
+      const j = JSON.parse(text);
+      recs = (j.type === 'FeatureCollection' ? j.features.map(ft => ({ ...ft.properties, lng: ft.geometry.coordinates[0], lat: ft.geometry.coordinates[1] })) : j)
+        .map(r => opFromObj(Object.fromEntries(Object.entries(r).map(([k, v]) => [k.toLowerCase(), v]))));
+    }
+    const ok = recs.filter(o => isFinite(o.lat) && isFinite(o.lng) && o.lat && o.content && !isNaN(pTime(o.time)));
+    const seen = new Set(posts.map(o => o.time + '|' + o.content));
+    const add = ok.filter(o => { const k = o.time + '|' + o.content; if (seen.has(k)) return false; seen.add(k); return true; });   // 与已有及本文件内重复均去掉
+    posts = posts.concat(add); opSave(); renderEvent(); renderOpinions();
+    alert(`导入 ${add.length} 条` + (ok.length - add.length ? `，重复 ${ok.length - add.length} 条` : '') + (recs.length - ok.length ? `，缺时间/坐标/内容跳过 ${recs.length - ok.length} 条` : ''));
+  } catch (e) { alert('导入失败：' + e.message); }
+  opIn.value = '';
+};
+opExp.onclick = () => {
+  const vis = opVisible(); if (!vis.length) return alert('当前没有可导出的舆情');
+  const head = ['时间', '平台', '类别', '内容', '地点', '经度', '纬度', '链接', '所在区', `周边${radius}m文物`,
+    `周边${radius}m模拟最大水深_m`, `周边${radius}m模拟淹没占比`, '模拟命中'];
+  const rows = vis.map(o => { const mt = opMatch(o); return [o.time, o.platform, o.category, o.content, o.place, o.lng, o.lat, o.url, districtOf(o.lat, o.lng),
+    allPoints().filter(p => dist(p.lat, p.lng, o.lat, o.lng) <= radius).map(p => p.name).join('；'),
+    mt.use && mt.hmax != null ? mt.hmax.toFixed(2) : '', mt.use && mt.frac != null ? mt.frac.toFixed(3) : '', mt.use ? (mt.hit ? '是' : '否') : mt.why]; });
+  download(`舆情_${D.id}${curDist ? '_' + curDist : ''}.csv`, '﻿' + [head, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n'), 'text/csv');
+};
+opClear.onclick = () => { if (posts.length && confirm('清空全部已导入的舆情？')) { posts = []; opSave(); renderEvent(); renderOpinions(); } };
+
+// ---------- 调研信息（暴露度、脆弱性、应对能力；只存本机浏览器，靠导出/导入交换） ----------
+// 字段：[键, 标签, 类型, 选项]；类型 text/num/date/sel/multi/score/area/geo
+const SV_FIELDS = [
+  ['基本信息', [
+    ['category', '文物类别', 'sel', ['古遗址', '古墓葬', '古建筑', '石窟寺及石刻', '近现代重要史迹及代表性建筑', '其他']],
+    ['owner', '管理/使用单位', 'text'],
+    ['date', '调研日期', 'date'],
+    ['surveyor', '调研人', 'text'],
+    ['gps', '实测位置', 'geo'],
+  ]],
+  ['暴露度', [
+    ['terrain', '地形位置', 'sel', ['平地', '低洼地', '河滩/河岸', '沟口/山前冲沟', '坡地', '台地/高地']],
+    ['dist_river', '距最近河道/沟渠 (m)', 'num'],
+    ['rel_height', '本体地面高于周边 (m)', 'num'],
+    ['area', '保护范围面积 (m²)', 'num'],
+    ['hist_flood', '历史受淹/积水', 'sel', ['无', '有', '不清楚']],
+    ['hist_depth', '历史最大积水深 (m)', 'num'],
+    ['hist_desc', '受淹年份与情况', 'text'],
+    ['paved', '周边地面硬化', 'sel', ['低', '中', '高']],
+  ]],
+  ['脆弱性', [
+    ['material', '主体材质', 'multi', ['夯土/土坯', '木', '砖', '石', '灰浆/琉璃', '混凝土', '金属', '其他']],
+    ['structure', '结构/形制', 'text'],
+    ['base_height', '台基/基础高度 (m)', 'num'],
+    ['condition', '保存状况', 'sel', ['好', '较好', '一般', '较差', '差']],
+    ['damage', '现有病害', 'multi', ['地基沉降', '墙体开裂', '返潮/盐析', '木构糟朽', '坍塌/冲刷', '屋面渗漏']],
+    ['ground_floor', '地下或首层存放文物', 'sel', ['是', '否', '不清楚']],
+  ]],
+  ['应对能力', [
+    ['drainage', '排水设施', 'sel', ['完好', '部分有效', '无', '不清楚']],
+    ['defense', '防洪措施', 'multi', ['挡水墙/门槛', '沙袋等物资', '抽水设备', '截洪沟']],
+    ['monitor', '监测设备', 'sel', ['有', '无']],
+    ['plan', '应急预案', 'sel', ['有', '无', '不清楚']],
+  ]],
+  ['调研人初评', [
+    ['score_exp', '暴露度 1–5', 'score'],
+    ['score_vul', '脆弱性 1–5', 'score'],
+  ]],
+  ['附件', [
+    ['photos', '照片编号', 'text'],
+    ['note', '备注', 'area'],
+  ]],
+];
+const SV_FLAT = SV_FIELDS.flatMap(([, fs]) => fs);
+const SV_KEY = 'flood_viewer_survey_v1';
+let survey = JSON.parse(localStorage.getItem(SV_KEY) || '{}');
+const svSaveAll = () => { localStorage.setItem(SV_KEY, JSON.stringify(survey)); svCount.textContent = `已填 ${Object.keys(survey).length} 处`; };
+const ptKey = p => `${p.name}|${(+p.lat).toFixed(5)},${(+p.lng).toFixed(5)}`;
+let svPoint = null;
+function svInput([k, label, type, opts], v) {
+  const id = `sv_${k}`;
+  if (type === 'sel') return `<select id="${id}"><option value=""></option>${opts.map(o => `<option${o === v ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
+  if (type === 'multi') return `<div class="opts" id="${id}">${opts.map(o => `<label><input type="checkbox" value="${esc(o)}"${(v || []).includes(o) ? ' checked' : ''}>${esc(o)}</label>`).join('')}</div>`;
+  if (type === 'score') return `<div class="opts" id="${id}">${[1, 2, 3, 4, 5].map(o => `<label><input type="radio" name="${id}" value="${o}"${String(v) === String(o) ? ' checked' : ''}>${o}</label>`).join('')}</div>`;
+  if (type === 'area') return `<textarea id="${id}">${esc(v || '')}</textarea>`;
+  if (type === 'geo') return `<div class="row"><input type="text" id="${id}" value="${esc(v || '')}" placeholder="纬度, 经度" style="flex:1"><button class="btn" type="button" id="svGps">取当前位置</button></div>`;
+  return `<input type="${type === 'num' ? 'number' : type}" step="any" id="${id}" value="${esc(v ?? '')}">`;
+}
+function openSurvey(i) {
+  svPoint = allPoints()[i]; if (!svPoint) return;
+  const rec = survey[ptKey(svPoint)] || {};
+  svTitle.textContent = svPoint.name + (svPoint.level ? ` · ${svPoint.level}` : '');
+  svTime.textContent = rec._updated ? `上次保存 ${rec._updated}` : '';
+  svForm.innerHTML = SV_FIELDS.map(([g, fs]) => `<fieldset><legend>${g}</legend>` +
+    fs.map(f => `<div class="f"><span>${f[1]}</span>${svInput(f, rec[f[0]])}</div>`).join('') + '</fieldset>').join('');
+  document.getElementById('svGps').onclick = () => {
+    if (!navigator.geolocation) return alert('此浏览器不支持定位');
+    navigator.geolocation.getCurrentPosition(
+      g => { document.getElementById('sv_gps').value = `${g.coords.latitude.toFixed(6)}, ${g.coords.longitude.toFixed(6)}（±${g.coords.accuracy.toFixed(0)} m）`; },
+      e => alert('定位失败：' + e.message), { enableHighAccuracy: true, timeout: 15000 });
+  };
+  svWrap.style.display = 'flex';
+}
+function svRead() {
+  const o = {};
+  for (const [k, , type] of SV_FLAT) {
+    const el = document.getElementById(`sv_${k}`);
+    if (type === 'multi') { const v = [...el.querySelectorAll('input:checked')].map(x => x.value); if (v.length) o[k] = v; }
+    else if (type === 'score') { const x = el.querySelector('input:checked'); if (x) o[k] = +x.value; }
+    else if (el.value.trim() !== '') o[k] = type === 'num' ? +el.value : el.value.trim();
+  }
+  return o;
+}
+const closeSurvey = () => { svWrap.style.display = 'none'; svPoint = null; };
+document.getElementById('svClose').onclick = closeSurvey;
+svWrap.onclick = ev => { if (ev.target === svWrap) closeSurvey(); };
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && svPoint) closeSurvey(); });
+svSave.onclick = () => {
+  const o = svRead(), key = ptKey(svPoint);
+  if (Object.keys(o).length) survey[key] = { ...o, _updated: new Date().toLocaleString('zh-CN', { hour12: false }) };
+  else delete survey[key];
+  svSaveAll(); closeSurvey(); renderPoints();
+};
+svDel.onclick = () => { if (svPoint && confirm('清除本点的调研记录？')) { delete survey[ptKey(svPoint)]; svSaveAll(); closeSurvey(); renderPoints(); } };
+
+// 调研表 CSV：全部点位（预置 + 自添加）各一行，未填的留空，可直接作为空白调研表下发
+const csvCell = v => v == null ? '' : /[",\n\r]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
+const SV_BASE = [['名称', p => p.name], ['保护级别', p => p.level || ''], ['所在区', p => p.district || ''], ['经度', p => (+p.lng).toFixed(6)], ['纬度', p => (+p.lat).toFixed(6)]];
+svExp.onclick = () => {
+  const head = SV_BASE.map(c => c[0]).concat(SV_FLAT.map(f => f[1]), ['最后保存']);
+  const rows = allPoints().map(p => {
+    const r = survey[ptKey(p)] || {};
+    return SV_BASE.map(c => c[1](p)).concat(SV_FLAT.map(([k]) => Array.isArray(r[k]) ? r[k].join('；') : r[k]), [r._updated]);
+  });
+  download(`文物调研表_${new Date().toISOString().slice(0, 10)}.csv`, '﻿' + [head, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n'), 'text/csv');
+};
+function parseCsvFull(text) {                            // 支持引号、引号内逗号与换行
+  const rows = []; let row = [], cell = '', q = false;
+  text = text.replace(/^﻿/, '');
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(cell); cell = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; }
+    else cell += c;
+  }
+  if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(r => r.some(x => x.trim() !== ''));
+}
+svIn.onchange = async () => {
+  const f = svIn.files[0]; if (!f) return;
+  try {
+    const rows = parseCsvFull(await f.text()), head = rows.shift().map(s => s.trim());
+    const col = name => head.indexOf(name);
+    if (col('名称') < 0) throw new Error('缺少“名称”列');
+    const pts = allPoints();
+    let nRec = 0, nNew = 0;
+    for (const r of rows) {
+      const name = r[col('名称')].trim(), lng = +r[col('经度')], lat = +r[col('纬度')];
+      let p = pts.find(q => q.name === name && isFinite(lat) && Math.abs(q.lat - lat) < 1e-4 && Math.abs(q.lng - lng) < 1e-4) ||
+              pts.find(q => q.name === name);
+      const o = {};
+      for (const [k, label, type] of SV_FLAT) {
+        const i = col(label); if (i < 0) continue;
+        const v = (r[i] || '').trim(); if (!v) continue;
+        o[k] = type === 'multi' ? v.split(/[；;]/).map(s => s.trim()).filter(Boolean) : type === 'num' || type === 'score' ? +v : v;
+      }
+      if (!Object.keys(o).length) continue;
+      if (!p) {
+        if (!isFinite(lat) || !isFinite(lng)) continue;
+        p = { name, level: col('保护级别') >= 0 ? r[col('保护级别')] : '', lat, lng }; points.push(p); pts.push(p); nNew++;
+      }
+      const i = col('最后保存');
+      survey[ptKey(p)] = { ...o, _updated: (i >= 0 && r[i]) || new Date().toLocaleString('zh-CN', { hour12: false }) }; nRec++;
+    }
+    save(); svSaveAll(); renderPoints();
+    alert(`已导入 ${nRec} 条调研记录${nNew ? `，新增点位 ${nNew} 个` : ''}（同一点位以导入内容为准）`);
+  } catch (e) { alert('导入失败：' + e.message); }
+  svIn.value = '';
+};
+svSaveAll();
 
 function boot() { fillDatasets(); openDataset(IDX[0].id); }
 if (!ENCRYPTED) boot();
