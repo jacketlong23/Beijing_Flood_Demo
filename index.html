@@ -3,13 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>洪涝模拟结果查看</title>
+<title>北京文物洪涝风险动态评估</title>
 <link rel="stylesheet" href="lib/leaflet.css">
 <script src="lib/leaflet.js"></script>
 <script src="lib/proj4.js"></script>
 <script src="accounts.js"></script>
 <script src="enc_index.js"></script>
 <script src="data_index.js"></script>
+<script src="admin_account.js" onerror="void 0"></script>
 <style>
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; font: 14px/1.55 "Microsoft YaHei", "微软雅黑", "PingFang SC", sans-serif; color: #222; }
@@ -36,8 +37,35 @@
   #side section[data-tab] { display: none; }
   #side.t-flood section[data-tab~="flood"], #side.t-heritage section[data-tab~="heritage"], #side.t-opinion section[data-tab~="opinion"], #side.t-forecast section[data-tab~="forecast"] { display: block; }
   #side section[hidden] { display: none !important; }
-  #side.t-forecast[data-fc="live"] section.fc-replay, #side.t-forecast[data-fc="replay"] section.fc-live { display: none !important; }
-  #yearSeg.dim { opacity: .35; pointer-events: none; }
+  #side.live section.hs, #side:not(.live) section.lv, #side:not(.t-forecast) .fo { display: none !important; }
+  #yearSeg button.dis { opacity: .35; pointer-events: none; }
+  #yearSeg button.lvb { margin-left: 6px; border-radius: 3px; }
+  .afTest { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; background: #fdecea; border: 1px solid #c0392b; color: #c0392b; border-radius: 3px; padding: 4px 6px; margin-bottom: 6px; font-size: 13px; }
+  .afTest button { margin-left: auto; flex: none; border-color: #c0392b; color: #c0392b; padding: 1px 8px; }
+  .afTest span { flex-basis: 100%; order: 3; color: #a33; font-size: 12px; }
+  .ptCtl { background: #fff; padding: 4px 8px; font-size: 14px; cursor: pointer; user-select: none; }
+  .ptCtl input { vertical-align: -2px; margin: 0 4px 0 0; }
+  #ptWrap td.t1 { white-space: nowrap; font-size: 12px; }
+  .cmb { display: inline-block; min-width: 1.6em; text-align: center; border-radius: 3px; color: #fff; font-size: 12px; padding: 0 3px; }
+  #rvPanel { display: none; position: absolute; top: 100px; right: 10px; z-index: 900; width: 340px; max-height: calc(100% - 120px);
+    background: #fff; border-radius: 6px; box-shadow: 0 2px 12px #0003; flex-direction: column; font-size: 14px; }
+  #rvPanel.show { display: flex; }
+  #rvHead { display: flex; align-items: center; padding: 6px 10px; background: #1f3b57; color: #fff; border-radius: 6px 6px 0 0; }
+  #rvHead button { margin-left: auto; background: none; border: 0; color: #fff; font-size: 16px; cursor: pointer; }
+  #rvBody { overflow-y: auto; padding: 8px 10px; }
+  #rvPanel.fold #rvBody { display: none; }
+  #rvBody > div + div { margin-top: 8px; }
+  #rvList { max-height: 220px; overflow-y: auto; border: 1px solid #e3e3e3; border-radius: 4px; }
+  #rvList .it { padding: 5px 8px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 13px; line-height: 1.45; }
+  #rvList .it:hover { background: #f3f7fb; } #rvList .it.on { background: #dbe6f1; }
+  #rvList .meta { color: #888; font-size: 12px; }
+  .tag { display: inline-block; font-size: 11px; padding: 0 4px; border-radius: 3px; margin-right: 3px; background: #eef1f5; color: #555; }
+  .tag.new { background: #c0392b; color: #fff; } .tag.ok { background: #e3f2e7; color: #1a7f37; } .tag.warn { background: #fdf0dd; color: #a05a00; }
+  #rvCard .ev { font-size: 12px; color: #555; background: #fafafa; border-left: 3px solid #d0d7de; padding: 3px 6px; margin: 3px 0; }
+  #rvCard label { display: block; font-size: 13px; margin-top: 5px; color: #555; }
+  #rvCard input, #rvCard textarea, #rvCard select { width: 100%; box-sizing: border-box; font: inherit; }
+  .chip { display: inline-block; border: 1px solid #bbb; border-radius: 10px; padding: 0 7px; margin: 2px 3px 0 0; font-size: 12px; cursor: pointer; background: #fff; }
+  .leaflet-container.picking { cursor: crosshair; }
   .afBadge { padding: 6px 10px; border-radius: 4px; color: #fff; font-weight: bold; margin: 4px 0 8px; }
   #afCmp tbody tr { cursor: pointer; } #afCmp tbody tr.on { background: #dbe6f1; font-weight: bold; }
   .evName { font-weight: bold; color: #1f3b57; }
@@ -179,6 +207,8 @@
   <dl class="help" style="margin:6px 0 0">
     <dt>运行</dt><dd>每天 0:30、6:30、12:30、18:30 取最新起报；北京 72 h 最大格点雨量 ≥ 30 mm 才运行洪涝模型；只在本机网页显示</dd>
     <dt>超阈文物点</dt><dd>满足任一：① 50 m 内危险性 ≥ 3 级（不含河道、水域、闭洼格）；② 临河文物（100 m 内有河道，桥、堤、闸、坝、码头、运河放宽到 200 m）河道最高水位达到文物地面（漫岸）。湖库不参与，模型从干初始起算，湖库水位只反映注水</dd>
+    <dt>右上角“实时”</dt><dd>显示最新一次自动预报（未来 72 h，不是实测）。文物洪涝风险栏给出各文物周边预报水深、危险性、预计开始积水时刻和 ECMWF / GFS 是否都超阈；舆情分析栏底图为最新预报，列出最近 7 天的报道。历史洪涝反演没有“实时”</dd>
+    <dt>综合风险（暂定）</dt><dd>仅对有调研信息的文物计算：50 m 内危险性（河道漫岸按 3 级）扣除本体高出周边与台基高度后，与调研脆弱性（材质、保存状况、病害、排水与防洪措施，或调研人初评）按矩阵组合为高 / 中 / 低；权重未标定</dd>
     <dt>局限</dt><dd>实况热启动建成前从干地起算，起报前已下的雨不计入，连续降雨时水深可能偏低；结果未校准，不代表真实水深</dd>
   </dl>
   <h2>数据与局限</h2>
@@ -187,11 +217,11 @@
 </div></div>
 <div id="app">
   <header id="top">
-    <h1>北京洪涝反演与文物影响<small>未校准</small></h1>
+    <h1>北京文物洪涝风险动态评估</h1>
     <nav id="tabs">
       <button data-tab="flood">历史洪涝反演</button>
       <button data-tab="heritage">文物洪涝风险</button>
-      <button data-tab="opinion">历史舆情分析</button>
+      <button data-tab="opinion">舆情分析</button>
       <button data-tab="forecast">洪水预报</button>
     </nav>
     <div class="ctx">
@@ -202,8 +232,8 @@
     </div>
   </header>
   <div id="main">
-  <aside id="side" class="t-flood" data-fc="live">
-    <section data-tab="flood opinion">
+  <aside id="side" class="t-flood">
+    <section data-tab="flood opinion" class="hs">
       <div id="loading">加载中…</div>
       <div id="evInfo"></div>
     </section>
@@ -214,40 +244,40 @@
       <svg id="ftArea" viewBox="0 0 330 44" preserveAspectRatio="none"></svg>
       <div id="ftAreaTip"></div>
     </section>
-    <section data-tab="opinion" id="tlSec">
+    <section data-tab="opinion" id="tlSec" class="hs">
       <h2>时间轴</h2>
       <div id="tlBar"><button class="btn" id="tlPlay">▶ 播放</button><input type="range" id="tlRange" min="0" max="1" step="1"><select id="tlSpeed"><option value="400">慢</option><option value="150" selected>中</option><option value="50">快</option></select></div>
       <div id="tlNow"></div>
       <div class="legend" id="tlLegend"></div>
       <div id="tlStat"></div>
     </section>
-    <section data-tab="forecast" id="fcModeSec"><div class="seg" id="fcModeSeg"></div></section>
-    <section data-tab="forecast" id="afSec" class="fc-live">
+    <section data-tab="forecast heritage opinion" id="afSec" class="lv">
       <h2>最新自动预报 <span id="afAge" style="font-weight:normal;font-size:13px"></span></h2>
       <style>#afAlert tbody tr { cursor: pointer; } #afAlert tbody tr:hover { background: #eef3f8; }</style>
+      <div id="afTest"></div>
       <div id="afBadge"></div>
       <table id="afCmp"><thead><tr><th></th><th>起报</th><th class="num">平均 mm</th><th class="num">最大 mm</th><th>洪涝模型</th></tr></thead><tbody></tbody></table>
-      <div id="afInfo" style="margin-top:6px"></div>
+      <div id="afInfo" class="fo" style="margin-top:6px"></div>
       <div class="seg" id="afLy" style="margin-top:8px"></div>
       <div class="seg" id="afDay" style="margin-top:4px"></div>
       <div class="legend" id="afLegend" style="margin-top:6px"></div>
-      <div id="afAlerts"></div>
-      <div class="row" style="margin-top:8px;gap:6px"><span style="color:#888;font-size:13px">历史起报</span><select id="afRun" style="flex:1"></select></div>
-      <div class="nc-note">以气象台发布为准：
+      <div id="afAlerts" class="fo"></div>
+      <div class="row fo" style="margin-top:8px;gap:6px"><span style="color:#888;font-size:13px">历史起报</span><select id="afRun" style="flex:1"></select></div>
+      <div class="nc-note fo">以气象台发布为准：
         <a href="http://bj.cma.gov.cn/" target="_blank" rel="noopener">北京市气象局</a> ·
         <a href="https://www.nmc.cn/publish/forecast/ABJ/beijing.html" target="_blank" rel="noopener">北京城市预报</a> ·
         <a href="https://www.nmc.cn/publish/alarm.html" target="_blank" rel="noopener">气象预警</a> ·
         <a href="http://www.12379.cn/" target="_blank" rel="noopener">国家预警信息发布中心</a></div>
     </section>
-    <section data-tab="forecast" id="fcNone" class="fc-replay">临近预报回放目前只有 2024 年 7 月 30 日一场，切换到 2024 查看。</section>
-    <section data-tab="flood heritage forecast" id="lySec" class="fc-replay">
+    <section data-tab="forecast" id="fcNone" class="hs">临近预报回放目前只有 2024 年 7 月 30 日一场，右上角选 2024 查看；选“实时”查看最新自动预报。</section>
+    <section data-tab="flood heritage forecast" id="lySec" class="hs">
       <h2>图层</h2>
       <div class="tabnote" id="hzNote">暂名“风险”，目前仅含危险性 H</div>
       <div class="seg" id="layerSeg"></div>
       <div style="margin-top:8px" class="row"><span>透明度</span><input type="range" id="opacity" min="0" max="1" step="0.05" value="0.8" style="flex:1"></div>
       <div class="legend" id="legend" style="margin-top:6px"></div>
     </section>
-    <section id="ncSec" data-tab="forecast" class="fc-replay">
+    <section id="ncSec" data-tab="forecast" class="hs">
       <h2>起报时刻（预见期 3 h）</h2>
       <table id="ncTab">
         <thead><tr><th>起报</th><th class="num">雨量 预报/实况</th><th class="num">CSI</th><th class="num">不下雨</th></tr></thead>
@@ -256,12 +286,12 @@
       <div id="ncDetail"></div>
       <div class="nc-note">回放：500 m 雷达临近预报、CLDAS 实况和不下雨三种情况，分别从同一时刻的模拟状态出发计算 3 h，以 CLDAS 结果为参照（不是实测）；雨量为北京市面平均。“不下雨”一列的 CSI 高于预报时，说明预报降雨没有带来额外信息</div>
     </section>
-    <section id="ncPtSec" data-tab="forecast" class="fc-replay">
+    <section id="ncPtSec" data-tab="forecast" class="hs">
       <h2>文物点位周边 <span id="ncRad" style="font-weight:normal;color:#888;font-size:13px"></span></h2>
       <div id="ncPtWrap" style="max-height:340px;overflow-y:auto"><table id="ncPt"><thead><tr><th>名称</th><th class="num">预报<br>水深 m</th><th class="num">实况<br>水深 m</th><th>新增积水</th></tr></thead><tbody></tbody></table></div>
       <div class="nc-note">3 h 内周边最大水深；只列预报或实况 ≥ 0.15 m 的国保点，按预报水深排序</div>
     </section>
-    <section data-tab="forecast" id="fcLinks" class="fc-live">
+    <section data-tab="forecast" id="fcLinks" class="lv">
       <details id="fcDet"><summary style="cursor:pointer">中国气象局 GRAPES 对照 <span id="fcWhere" style="color:#888;font-size:13px"></span></summary>
       <div id="fcBox"></div>
       <div class="nc-note">经 Open-Meteo 获取，需联网；每区取一个代表点</div>
@@ -279,8 +309,9 @@
       <div class="row" style="margin-top:6px"><span>周边分析半径</span><div class="seg" id="radSeg" style="flex:1"></div></div>
       <div id="addHint">在地图上点击放置点位，Esc 取消</div>
       <input id="ptFilter" placeholder="搜索名称">
+      <div id="ptLive" class="nc-note"></div>
       <div id="ptWrap"><table>
-        <thead><tr><th>名称</th><th class="num">点位 hmax</th><th class="num">周边 hmax</th><th class="num">周边淹没</th><th class="num">周边风险</th><th></th></tr></thead>
+        <thead id="ptHead"><tr><th>名称</th><th class="num">点位 hmax</th><th class="num">周边 hmax</th><th class="num">周边淹没</th><th class="num">周边风险</th><th></th></tr></thead>
         <tbody id="ptBody"></tbody>
       </table></div>
     </section>
@@ -306,7 +337,30 @@
       <div id="opWrap"></div>
     </section>
   </aside>
-  <div id="mapWrap"><div id="map"></div><div id="offline">底图需要联网；当前无法加载，结果图层与点位功能仍可使用</div></div>
+  <div id="mapWrap"><div id="map"></div>
+    <div id="rvPanel"><div id="rvHead"><b>实时舆情</b><button id="rvFold" title="收起">－</button></div><div id="rvBody">
+      <div id="rvLogin">
+        <div class="nc-note" style="margin-top:0">管理员登录后查看与审核</div>
+        <form id="rvLoginForm" onsubmit="return false">
+          <div class="row" style="margin-top:4px"><input id="rvUser" placeholder="用户名" autocomplete="username" style="flex:1"></div>
+          <div class="row" style="margin-top:6px"><input id="rvPw" type="password" placeholder="密码" autocomplete="current-password" style="flex:1"></div>
+          <div class="row" style="margin-top:6px"><button class="btn pri" id="rvGo">登录</button><span id="rvMsg" style="color:#c00;font-size:13px"></span></div>
+        </form>
+      </div>
+      <div id="rvFeed">
+        <div class="row" style="margin:0 0 6px;gap:6px"><div id="rvStat" class="nc-note" style="margin:0;flex:1"></div><button class="btn" id="rvAdd">手动添加</button></div>
+        <div class="row" style="gap:6px"><div class="seg" id="rvView" style="flex:1"></div><button class="btn" id="rvAuto" title="自动滚动"></button></div>
+        <div class="row" style="margin-top:6px;font-size:13px"><label><input type="checkbox" id="rvEvOnly">只看有灾情描述</label><input id="rvQ" placeholder="关键词" style="flex:1;margin-left:8px"></div>
+        <div id="rvList" style="margin-top:6px"></div>
+      </div>
+      <div id="rvCard"></div>
+      <div id="rvIO">
+        <div class="row" style="gap:6px"><button class="btn" id="rvExp">导出已通过 CSV</button><button class="btn" id="rvSave">备份审核记录</button>
+          <label class="btn">恢复<input type="file" id="rvIn" accept=".json" hidden></label><button class="btn" id="rvOut" style="margin-left:auto">退出</button></div>
+        <div class="nc-note">通过的条目进入左侧舆情列表（实时显示最近 7 天；选年份可与该场模拟对照）；审核记录只存本机浏览器，请定期备份</div>
+      </div>
+    </div></div>
+<div id="offline">底图需要联网；当前无法加载，结果图层与点位功能仍可使用</div></div>
   </div>
 </div>
 
@@ -379,7 +433,16 @@ const cache = {};
 let firstOpen = true;
 function fillDatasets() { IDX.forEach(d => { const o = document.createElement('option'); o.value = d.id; o.textContent = d.name; dsSel.appendChild(o); }); }
 const yearOf = d => (d.name.match(/^\d{4}/) || [d.id])[0];
-const drawYears = () => drawSeg(yearSeg, IDX.map(d => [d.id, yearOf(d)]), D ? D.id : null, id => openDataset(id));
+// 右上角：各年份（历史场次）+“实时”（最新自动预报）。历史洪涝反演没有实时，选“实时”时该栏显示当前年份，切回其他栏恢复实时
+let live = true;
+const isLive = () => live && tab !== 'flood';
+function drawYears() {
+  drawSeg(yearSeg, [...IDX.map(d => [d.id, yearOf(d)]), ['live', '实时']], isLive() ? 'live' : D ? D.id : null,
+    id => id === 'live' ? setLive(true) : (live = false, applyCtx(), openDataset(id)));
+  yearSeg.lastChild.classList.add('lvb');
+  yearSeg.lastChild.classList.toggle('dis', tab === 'flood');
+  yearSeg.lastChild.title = tab === 'flood' ? '历史洪涝反演只有历史场次' : '最新自动预报（未来 72 h，非实测）';
+}
 function loadScript(src) {
   return new Promise((ok, fail) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => fail(new Error(src)); document.head.appendChild(s); });
 }
@@ -530,15 +593,31 @@ function drawSeg(el, items, cur, onPick) {
 // ---------- 顶栏标签：历史洪涝反演 / 文物洪涝风险 / 历史舆情分析 ----------
 function setTab(t) {
   if (t === tab && D) return;
-  tab = t; side.className = 't-' + t;
+  tab = t;
   [...tabs.children].forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   if (t !== 'opinion') tlStop();
   if (t !== 'flood') ftStop();
-  [[ptLayer, t === 'heritage'], [opLayer, t === 'opinion'], [ncLayer, t === 'forecast' && fcMode === 'replay'], [afLayer, t === 'forecast' && fcMode === 'live']].forEach(([ly, on]) => on ? ly.addTo(map) : ly.remove());
-  if (t === 'forecast') { drawFcMode(); afFetch(); if (fcDet.open) fcLoad(); }
-  yearSeg.classList.toggle('dim', t === 'forecast' && fcMode === 'live');
-  clearInterval(AF.timer); AF.timer = t === 'forecast' ? setInterval(afFetch, 10 * 60e3) : null;
+  applyCtx();
+  if (t === 'forecast' && fcDet.open) fcLoad();
+  rvPanel.classList.toggle('show', t === 'opinion');
+  if (t === 'opinion') rvEnter(); else rvLeave();
   if (D && TAB_KINDS[t]) kind = TAB_KINDS[t].find(hasKind) || 'hmax';
+  if (D) render();
+}
+// 按“栏目 × 实时/年份”切换左栏分区、地图图层和预报自动刷新
+function applyCtx() {
+  const lv = isLive();
+  side.className = 't-' + tab + (lv ? ' live' : '');
+  [[ptLayer, ptShow], [opLayer, tab === 'opinion'], [rvLayer, tab === 'opinion' && lv], [ncLayer, tab === 'forecast' && !lv], [afLayer, lv]]
+    .forEach(([ly, on]) => on ? ly.addTo(map) : ly.remove());
+  const want = lv && tab !== 'flood';
+  if (want && !AF.timer) { afFetch(); AF.timer = setInterval(afFetch, 10 * 60e3); }
+  if (!want && AF.timer) { clearInterval(AF.timer); AF.timer = null; }
+  drawYears();
+}
+function setLive(v) {
+  live = v; applyCtx();
+  if (v && window.FLOOD_FC) afDraw();
   if (D) render();
 }
 [...tabs.children].forEach(b => b.onclick = () => setTab(b.dataset.tab));
@@ -553,9 +632,12 @@ function render() {
   hzNote.style.display = tab === 'heritage' ? '' : 'none';
   if (overlay) map.removeLayer(overlay);
   lySec.hidden = false;                                  // 回放模式下由 renderNowcast 决定
+  if (isLive()) {                                        // 实时：底图为最新自动预报（afLayer），文物点按预报结果着色
+    overlay = null; ncLayer.clearLayers(); legend.innerHTML = '';
+    renderPoints(); renderOpinions(); return;
+  }
   if (tab === 'forecast') {                              // 预报标签：实时预报不用年份数据；临近预报回放用 2024 数据集
     overlay = null;
-    if (fcMode === 'live') { ncLayer.clearLayers(); legend.innerHTML = ''; return; }
     if (!renderNowcast()) { legend.innerHTML = ''; return; }
     kind = `nc_${ncKey}_${ncTag}`;
   } else drawSeg(layerSeg, KINDS.filter(([k]) => kinds.includes(k) && hasKind(k)), kind, v => { kind = v; if (v !== 'hmax' && D.hourly) { ftStop(); FT.t = D.hourly.n; ftRange.value = FT.t; } render(); });
@@ -656,7 +738,7 @@ const abgr = h => (0xe6 << 24 | parseInt(h.slice(5, 7), 16) << 16 | parseInt(h.s
 const tlN = () => D.rain.hours;
 const dFmt = d => `${d.getMonth() + 1}月${d.getDate()}日 ${String(d.getHours()).padStart(2, '0')}:00`;
 const tlTime = t => new Date(pTime(D.rain.start).getTime() + t * 3600e3);
-const tlOn = () => tab === 'opinion' && TL.arr && TL.t != null && TL.t < tlN();
+const tlOn = () => tab === 'opinion' && !isLive() && TL.arr && TL.t != null && TL.t < tlN();
 function tlInit() {
   tlSec.hidden = !TL.arr;
   if (!TL.arr) return;
@@ -824,11 +906,123 @@ function popupHtml(lat, lng, p) {
 const PT_KEY = 'flood_viewer_points_v1';
 let points = JSON.parse(localStorage.getItem(PT_KEY) || '[]');
 const ptLayer = L.layerGroup().addTo(map);
+let ptMk = {};                                           // 名称 → 地图标记（预报超阈列表点击定位用）
+// 地图右上角“文物点位”开关：各栏目共用，记在本机
+const PT_SHOW_KEY = 'flood_viewer_pt_show';
+let ptShow = localStorage.getItem(PT_SHOW_KEY) !== '0';
+const ptCtl = L.control({ position: 'topright' });
+ptCtl.onAdd = () => {
+  const d = L.DomUtil.create('label', 'ptCtl leaflet-bar');
+  d.innerHTML = `<input type="checkbox"${ptShow ? ' checked' : ''}>文物点位`;
+  L.DomEvent.disableClickPropagation(d);
+  d.querySelector('input').onchange = e => { ptShow = e.target.checked; localStorage.setItem(PT_SHOW_KEY, ptShow ? '1' : '0'); applyCtx(); };
+  return d;
+};
+ptCtl.addTo(map);
 const save = () => localStorage.setItem(PT_KEY, JSON.stringify(points));
 const allPoints = () => PRESETS.map(p => ({ ...p, preset: true })).concat(points);
+function ptOpen(a) {
+  map.setView([a.lat, a.lng], Math.max(map.getZoom(), 15));
+  const m = ptMk[a.name];
+  if (m && ptShow) return m.openPopup();
+  const p = allPoints().find(q => q.name === a.name) || a;
+  L.popup({ maxWidth: 460 }).setLatLng([a.lat, a.lng]).setContent(isLive() ? livePopup(p) : popupHtml(a.lat, a.lng, p)).openOn(map);
+}
+// ---------- 实时：最新自动预报的文物逐点结果（publish_forecast.py 输出 pts：各半径 [最大水深, 危险性, 积水占比, 开始积水 h, 最深 h]，河道 ro/rh/rr） ----------
+const afCur = () => { const F = window.FLOOD_FC; return F && F.runs.length ? F.runs.find(r => r.id === AF.id) || F.runs[0] : null; };
+function afOther(r) {                                    // 另一预报源中起报时刻最接近的一次
+  const o = window.FLOOD_FC.runs.filter(x => x.source !== r.source);
+  if (!o.length) return null;
+  const t = pTime(r.start_local), d = x => Math.abs(pTime(x.start_local) - t);
+  return o.reduce((a, b) => d(b) < d(a) ? b : a);
+}
+const afAlerted = (r, name) => !!(r && (r.alerts || []).some(a => a.name === name));
+const afHour = (r, h) => { const d = new Date(pTime(r.start_local).getTime() + h * 3600e3); return `${d.getDate()}日${String(d.getHours()).padStart(2, '0')}时`; };
+// 调研修正（暂定，权重未标定）：本体高出周边 + 台基高度 → 本体有效水深；脆弱性三档；50 m 危险性 × 脆弱性 → 综合风险
+const CMB = { 1: ['低', '#1a9850'], 2: ['中', '#e6a100'], 3: ['高', '#d73027'] };
+const CMB_M = [[1, 1, 1], [1, 1, 1], [1, 1, 2], [2, 2, 3], [2, 3, 3], [3, 3, 3]];   // 行：危险性 0–5；列：脆弱性 低 / 中 / 高
+function svVul(s) {
+  if (!s) return null;
+  if (s.score_vul) return s.score_vul <= 2 ? 0 : s.score_vul === 3 ? 1 : 2;   // 调研人初评优先
+  if (!s.material && !s.condition && !s.damage && !s.drainage) return null;
+  const m = s.material || [], dm = s.damage || [];
+  let v = m.some(x => x === '夯土/土坯' || x === '木') ? 2 : m.some(x => x === '砖' || x === '灰浆/琉璃') ? 1 : 0;
+  if (['较差', '差'].includes(s.condition)) v++;
+  if (dm.some(x => ['地基沉降', '墙体开裂', '坍塌/冲刷'].includes(x))) v++;
+  if (s.ground_floor === '是') v++;
+  if (s.drainage === '无') v++; else if (s.drainage === '完好') v--;
+  if ((s.defense || []).length >= 2) v--;
+  return v >= 3 ? 2 : v >= 1 ? 1 : 0;
+}
+function liveAt(p, r = afCur()) {
+  const e = r && r.pts && r.pts[p.name];
+  if (!e) return null;
+  const z = e.z[radius] || null, z50 = e.z[50] || null, s = survey[ptKey(p)] || null;
+  const up = s && (s.rel_height != null || s.base_height != null) ? (s.rel_height || 0) + (s.base_height || 0) : null;
+  const heff = up != null && z50 && z50[0] != null ? Math.max(0, z50[0] - up) : null;
+  const roff = up != null && e.ro != null ? e.ro - up : null;
+  let H = Math.max(z50 && z50[0] != null ? z50[1] : 0, e.ro != null && e.ro >= 0 ? 3 : 0);
+  if (up != null && (heff == null || heff < 0.15) && (roff == null || roff < 0)) H = Math.min(H, 1);   // 本体高于预报水面
+  const V = svVul(s), o = afOther(r);
+  return { e, z, z50, up, heff, H, V, cmb: V == null ? null : CMB_M[H][V], al: afAlerted(r, p.name), al2: o && o.case ? afAlerted(o, p.name) : false, o };
+}
+function livePopup(p) {
+  const r = afCur(), a = r && liveAt(p, r), hh = v => v == null ? '—' : afHour(r, v);
+  let h = `<div class="pop"><b>${esc(p.name)}</b>${p.level ? '<br>' + esc(p.level) : ''}<br>${r && r.test ? '<b style="color:#c0392b">测试数据，不是真实预报</b> ' : ''}<span style="color:#888">${r ? `${r.source} ${fmtT(r.start_local)} 起报，未来 ${r.hours || 72} h` : ''}</span>`;
+  if (!r || !r.case) return h + `<br>${r ? `预报雨量未达 ${r.min_rain_threshold_mm ?? 30} mm，未运行洪涝模型` : '尚无自动预报结果'}</div>`;
+  if (!a) return h + '<br>只有预置文物点有预报逐点结果</div>';
+  const z = a.z, z50 = a.z50, ro = a.e.ro;
+  if (z) h += `<br>周边 ${rTxt()}：${z[0] == null ? '无积水' : `最大水深 ${fmt(z[0])} m，危险性 ${z[1]} 级，积水占比 ${pct(z[2])}`}`;
+  if (z && z[3] != null) {
+    const dt = (pTime(r.start_local).getTime() + z[3] * 3600e3 - Date.now()) / 3600e3;
+    h += `<br>预计 <b>${hh(z[3])}</b> 开始积水${dt > 0 ? `（约 ${dt.toFixed(0)} h 后）` : ''}，${hh(z[4])} 最深`;
+  }
+  h += `<br>50 m 内：${z50 && z50[0] != null ? `最大水深 ${fmt(z50[0])} m，危险性 ${z50[1]} 级` : '无积水'}`;
+  if (ro != null) h += `<br>${a.e.rr} m 内河道最高水位${ro >= 0 ? `<b>高出</b>文物地面 ${ro.toFixed(2)} m` : `低于文物地面 ${(-ro).toFixed(2)} m`}（河道水深 ${fmt(a.e.rh)} m，含下切）`;
+  const o = a.o, yes = '<b style="color:#c0392b">是</b>';
+  h += `<br>超阈：${r.source} ${a.al ? yes : '否'}` + (o ? ` · ${o.source} ${fmtT(o.start_local)} 起报 ${!o.case ? '未运行模型' : a.al2 ? yes : '否'}` : '');
+  if (a.up != null || a.V != null) {
+    h += '<div style="margin-top:4px;border-top:1px solid #eee;padding-top:4px">调研修正（暂定）：';
+    if (a.up != null) h += `本体高出周边与台基合计 ${a.up.toFixed(2)} m，${a.heff == null ? '50 m 内无积水' : `本体处水深 ${fmt(a.heff)} m`}`;
+    if (a.V != null) h += `${a.up != null ? '；' : ''}脆弱性${['低', '中', '高'][a.V]}，综合风险 <span class="cmb" style="background:${CMB[a.cmb][1]}">${CMB[a.cmb][0]}</span>`;
+    h += '</div>';
+  } else h += '<br><span style="color:#888">无调研信息，未计算综合风险</span>';
+  return h + `<div style="margin-top:6px"><button class="btn" onclick="openSurvey(${allPoints().findIndex(q => ptKey(q) === ptKey(p))})">调研信息${survey[ptKey(p)] ? ' ✓' : ''}</button></div></div>`;
+}
+function renderPointsLive(q) {
+  const r = afCur();
+  ptLive.innerHTML = (r && r.test ? '<b style="color:#c0392b">测试数据，不是真实预报</b> · ' : '') + (!r ? '尚无自动预报结果' : !r.case ? `${r.source} ${fmtT(r.start_local)} 起报：预报雨量未达 ${r.min_rain_threshold_mm ?? 30} mm，未运行洪涝模型，暂无逐点结果`
+    : `${r.source} ${fmtT(r.start_local)} 起报 · 周边 ${rTxt()} · 超阈按 50 m 与河道水位判定 · “综合”需调研信息（暂定）`);
+  const rows = allPoints().filter(p => !curDist || (p.district || districtOf(p.lat, p.lng)) === curDist).map(p => ({ p, a: liveAt(p, r) }));
+  const key = ({ a }) => !a ? [0, 1e9, -1, -1] : [a.al || a.al2 ? 1 : 0, a.z && a.z[3] != null ? a.z[3] : 1e9, a.z && a.z[0] != null ? a.z[1] : -1, a.z && a.z[0] != null ? a.z[0] : -1];
+  rows.sort((x, y) => { const a = key(x), b = key(y); return b[0] - a[0] || a[1] - b[1] || b[2] - a[2] || b[3] - a[3]; });
+  rows.forEach(({ p, a }) => {
+    const z = a && a.z, rk = z && z[0] != null ? z[1] : null, col = rk == null ? '#ffffff' : RISK_COLORS[rk], hot = !!(a && (a.al || a.al2));
+    if (p.featured || !p.preset) L.circle([p.lat, p.lng], { radius, color: col === '#ffffff' ? '#ddd' : col, weight: 2, dashArray: '6 4', fill: false, interactive: false }).addTo(ptLayer);
+    const m = L.circleMarker([p.lat, p.lng], { radius: hot || p.featured ? 9 : p.preset ? 6 : 7, color: hot ? '#000' : p.preset ? '#c0392b' : '#000', weight: hot || p.featured ? 3 : p.preset ? 2 : 1.5, fillColor: col, fillOpacity: 1 })
+      .bindTooltip(p.name, { permanent: !!p.featured || hot, direction: 'right', offset: [8, 0] })
+      .bindPopup(() => livePopup(p), { maxWidth: 460 }).addTo(ptLayer);
+    ptMk[p.name] = m;
+    if (q && !p.name.includes(q)) return;
+    const sn = x => x === 'ECMWF' ? 'EC' : x, ag = !a ? '' : a.al && a.al2 ? '两者' : a.al ? '仅' + sn(r.source) : a.al2 ? '仅' + sn(a.o.source) : '';
+    const tr = document.createElement('tr'); tr.className = 'pt' + (p.featured ? ' preset' : '');
+    tr.innerHTML = `<td>${esc(p.name)}${survey[ptKey(p)] ? '<span class="done" title="已有调研信息">✓</span>' : ''}</td><td class="num">${fmt(z && z[0])}</td><td class="num">${chip(rk)}</td>`
+      + `<td class="t1">${z && z[3] != null ? afHour(r, z[3]) : '—'}</td><td class="t1" style="color:#c0392b">${ag}</td>`
+      + `<td>${a && a.cmb ? `<span class="cmb" style="background:${CMB[a.cmb][1]}">${CMB[a.cmb][0]}</span>` : '—'}</td><td class="${p.preset ? '' : 'del'}" title="删除">${p.preset ? '' : '✕'}</td>`;
+    tr.onclick = ev => {
+      if (ev.target.classList.contains('del')) { points.splice(points.indexOf(p0(p)), 1); save(); renderPoints(); return; }
+      ptOpen(p);
+    };
+    ptBody.appendChild(tr);
+  });
+}
 function renderPoints() {
-  ptLayer.clearLayers(); ptBody.innerHTML = '';
+  ptLayer.clearLayers(); ptBody.innerHTML = ''; ptMk = {};
   const q = ptFilter.value.trim();
+  ptHead.innerHTML = isLive() ? '<tr style="white-space:nowrap"><th>名称</th><th class="num" title="周边最大水深">水深 m</th><th class="num" title="周边最高危险性">等级</th><th title="预计开始积水（≥ 0.15 m）">积水</th><th title="EC：ECMWF；GFS">超阈</th><th title="结合调研信息（暂定）">综合</th><th></th></tr>'
+    : '<tr><th>名称</th><th class="num">点位 hmax</th><th class="num">周边 hmax</th><th class="num">周边淹没</th><th class="num">周边风险</th><th></th></tr>';
+  if (isLive()) return renderPointsLive(q);
+  ptLive.innerHTML = '';
   const dists = new Set(D.boundary.features.map(f => f.properties.name));
   const rows = allPoints().map(p => ({ p, r: valuesAt(p.lat, p.lng, scen), z: zoneStats(p.lat, p.lng, scen) }))
     .filter(({ p, z }) => {                      // 预置点只显示本数据集区内、模拟范围内的；选了区则只显示该区
@@ -845,6 +1039,7 @@ function renderPoints() {
     const m = L.circleMarker([p.lat, p.lng], { radius: p.featured ? 9 : p.preset ? 6 : 7, color: p.preset ? '#c0392b' : '#000', weight: p.featured ? 3 : p.preset ? 2 : 1.5, fillColor: col, fillOpacity: 1 })
       .bindTooltip(p.name, { permanent: !!p.featured, direction: 'right', offset: [8, 0] })
       .bindPopup(() => popupHtml(p.lat, p.lng, p), { maxWidth: 460 }).addTo(ptLayer);
+    ptMk[p.name] = m;
     if (q && !p.name.includes(q)) return;
     const tr = document.createElement('tr'); tr.className = 'pt' + (p.featured ? ' preset' : '');
     tr.innerHTML = `<td>${esc(p.name)}${survey[ptKey(p)] ? '<span class="done" title="已有调研信息">✓</span>' : ''}</td><td class="num">${fmt(r.hmax)}</td><td class="num">${fmt(z.hmax)}</td><td class="num">${pct(z.flood_frac)}</td><td class="num">${chip(z.risk_opt)}</td><td class="${p.preset ? '' : 'del'}" title="删除">${p.preset ? '' : '✕'}</td>`;
@@ -865,8 +1060,10 @@ function setAdding(on) {
 addBtn.onclick = () => setAdding(!adding);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') setAdding(false); });
 map.on('click', e => {
+  if (tab === 'opinion' && RV.pick) { rvSetLoc(e.latlng); return; }
   if (!D) return;
   const { lat, lng } = e.latlng;
+  if (!adding && isLive()) return;                       // 实时：地图上的数值来自预报图片，不做逐格查询
   if (!adding) { L.popup({ maxWidth: 460 }).setLatLng(e.latlng).setContent(popupHtml(lat, lng)).openOn(map); return; }
   const div = document.createElement('div'); div.className = 'form';
   div.innerHTML = `<b>新增文物点</b><input id="fName" placeholder="名称"><input id="fLevel" placeholder="保护级别（可选）"><button class="btn" id="fOk">保存</button>`;
@@ -950,10 +1147,10 @@ const safeUrl = u => /^https?:\/\//i.test(u || '') ? u : '';
 function opVisible() {
   if (!D) return [];
   const q = opFilter.value.trim(), cat = opCat.value;
-  const [t0, t1] = D.rain ? D.rain.sim.map(pTime) : [null, null];
+  const lv = isLive(), [t0, t1] = lv ? [new Date(Date.now() - OP_LIVE_D * 864e5), new Date(Date.now() + 864e5)] : D.rain ? D.rain.sim.map(pTime) : [null, null];
   return posts.filter(o => {
     const t = pTime(o.time);
-    if (!opAllT.checked && t0 && !(t >= t0 && t < t1)) return false;
+    if (!opAllT.checked && t0 && !(t >= t0 && t < t1)) return false;   // 实时：最近 OP_LIVE_D 天；历史：该场模拟时段
     if (cat && o.category !== cat) return false;
     if (q && !`${o.content} ${o.place} ${o.platform} ${o.category}`.includes(q)) return false;
     const d = districtOf(o.lat, o.lng);
@@ -962,7 +1159,9 @@ function opVisible() {
 }
 // 舆情与模拟对照：帖子周边 radius 内（不含河道、水域、闭洼）有 hmax ≥ 0.15 m 的格即“命中”；只统计模拟时段内、模拟范围内的帖子。
 // 帖子只报告“有水”，没有“无水”的样本，命中率相当于检出率，不能反映空报。
+const OP_LIVE_D = 7;
 function opMatch(o) {
+  if (isLive()) return { use: false, live: true, why: '' };       // 实时没有逐格数值，不做模拟对照
   const [t0, t1] = D.rain ? D.rain.sim.map(pTime) : [null, null], t = pTime(o.time);
   if (t0 && !(t >= t0 && t < t1)) return { use: false, why: '不在模拟时段' };
   const z = zoneStats(o.lat, o.lng, scen);
@@ -978,7 +1177,7 @@ function opPopup(o) {
   return `<div class="pop"><b>${esc(o.platform || '')}${o.category ? ' · ' + esc(o.category) : ''}</b><br>
     <span style="color:#888">${esc(fmtT(o.time))}${o.place ? ' · ' + esc(o.place) : ''}</span>
     <div style="margin:4px 0;max-width:340px">${esc(o.content)}</div>${u ? `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">原文</a><br>` : ''}
-    周边 ${rTxt()} ${mt.use ? (mt.hit ? `模拟最大水深 ${fmt(mt.hmax)} m，淹没占比 ${pct(mt.frac)}` : '模拟未淹没（hmax < 0.15 m）') : '：' + mt.why}<br>
+    ${mt.live ? '' : `周边 ${rTxt()} ${mt.use ? (mt.hit ? `模拟最大水深 ${fmt(mt.hmax)} m，淹没占比 ${pct(mt.frac)}` : '模拟未淹没（hmax < 0.15 m）') : '：' + mt.why}<br>`}
     ${mt.use && mt.tfirst != null ? `周边模拟最早淹没 ${dFmt(tlTime(mt.tfirst))}（${mt.tfirst <= mt.tpost ? '早于' : '晚于'}报道 ${Math.abs(mt.tpost - mt.tfirst).toFixed(0)} h）<br>` : ''}
     <span style="color:#888">周边 ${rTxt()} 内文物：${near.length ? near.map(p => esc(p.name)).join('、') : '无'}</span></div>`;
 }
@@ -989,7 +1188,7 @@ function renderOpinions() {
   opCat.innerHTML = '<option value="">全部类别</option>' + cats.map(c => `<option${c === cur ? ' selected' : ''}>${esc(c)}</option>`).join('');
   const vis = opVisible(), mts = vis.map(opMatch), used = mts.filter(m => m.use), nHit = used.filter(m => m.hit).length;
   opCount.textContent = posts.length ? `${vis.length} / ${posts.length}` : '';
-  opHit.innerHTML = used.length ? `模拟命中 <b>${nHit} / ${used.length}</b>（${pct(nHit / used.length)}）· 周边 ${rTxt()}` : '';
+  opHit.innerHTML = isLive() ? (opAllT.checked ? '' : `最近 ${OP_LIVE_D} 天的报道`) : used.length ? `模拟命中 <b>${nHit} / ${used.length}</b>（${pct(nHit / used.length)}）· 周边 ${rTxt()}` : '';
   const tl = tlOn(), tNow = tl ? tlTime(TL.t) : null;
   let nShow = 0, nWet = 0;
   const order = vis.map((o, i) => i);
@@ -999,10 +1198,10 @@ function renderOpinions() {
     if (tl && pTime(o.time) > tNow) return;
     const wet = mt.use && mt.tfirst != null && mt.tfirst <= (tl ? TL.t : mt.tpost);
     nShow++; if (wet) nWet++;
-    const cls = !mt.use ? 'out' : (tl ? wet : mt.hit) ? '' : 'miss';
+    const cls = mt.live ? '' : !mt.use ? 'out' : (tl ? wet : mt.hit) ? '' : 'miss';
     const m = L.marker([o.lat, o.lng], { icon: cls ? opIconBy[cls] : opIcon, zIndexOffset: -100 }).bindPopup(() => opPopup(o), { maxWidth: 380 }).addTo(opLayer);
     const div = document.createElement('div'); div.className = 'op';
-    div.innerHTML = `<div class="m">${esc(fmtT(o.time))} · ${esc(o.platform || '')}${o.category ? ' · ' + esc(o.category) : ''} · <span class="${mt.use ? (mt.hit ? 'hit' : 'miss') : ''}">${opMatchTxt(mt)}</span></div><div class="t">${esc(o.content)}</div>`;
+    div.innerHTML = `<div class="m">${esc(fmtT(o.time))} · ${esc(o.platform || '')}${o.category ? ' · ' + esc(o.category) : ''}${mt.live ? '' : ` · <span class="${mt.use ? (mt.hit ? 'hit' : 'miss') : ''}">${opMatchTxt(mt)}</span>`}</div><div class="t">${esc(o.content)}</div>`;
     div.onclick = () => { map.setView([o.lat, o.lng], Math.max(map.getZoom(), 14)); m.openPopup(); };
     opWrap.appendChild(div);
   });
@@ -1254,16 +1453,6 @@ function fcDraw() {
 }
 fcDet.ontoggle = () => { if (fcDet.open) fcLoad(); };
 distSel.addEventListener('change', () => { if (tab === 'forecast' && FC.pts) fcDraw(); });
-// 实时预报 / 临近预报回放（2024 年 7 月 30 日）切换
-let fcMode = 'live';
-const drawFcMode = () => drawSeg(fcModeSeg, [['live', '实时预报'], ['replay', '临近预报回放']], fcMode, setFcMode);
-function setFcMode(v) {
-  fcMode = v; side.dataset.fc = v; drawFcMode();
-  yearSeg.classList.toggle('dim', tab === 'forecast' && v === 'live');
-  [[ncLayer, v === 'replay'], [afLayer, v === 'live']].forEach(([ly, on]) => on ? ly.addTo(map) : ly.remove());
-  if (v === 'replay' && D && !D.nowcast && IDX.some(d => d.id === 'bj2024')) return openDataset('bj2024');
-  render(); if (v === 'live') afDraw();
-}
 
 // ---------- 最新自动预报：读本地 forecast/latest.js（publish_forecast.py 生成，cron_forecast.sh 每次预报后更新），每 10 min 重新读取 ----------
 const afLayer = L.layerGroup();
@@ -1271,21 +1460,34 @@ const AF = { src: 'ECMWF', id: null, ly: 'rain', day: 0, timer: null, ov: null }
 const AF_RAIN = [[0.1, '#edf8fb'], [10, '#b3cde3'], [25, '#8c96c6'], [50, '#8856a7'], [100, '#810f7c'], [250, '#4d004b']];
 const AF_H = [[0, '#deebf7'], [0.15, '#9ecae1'], [0.5, '#6baed6'], [1, '#3182bd'], [2, '#08519c'], [3, '#08306b'], [5, '#3f007d']];
 const AF_STALE_H = 7;                                   // 每 6 h 一次起报，超过 7 h 没有新结果即提示
-function afFetch() {
-  const s = document.createElement('script');
-  s.src = 'forecast/latest.js?t=' + Date.now();
-  // 发布版预报和图层一并加密，登录后在浏览器中解开。
-  s.onload = async () => {
-    try {
-      if (ENCRYPTED && window.ENC_FORECAST) {
-        window.FLOOD_FC = JSON.parse(new TextDecoder().decode(await decryptB64(window.ENC_FORECAST)));
-        delete window.ENC_FORECAST;
-      }
-    } catch (e) { console.error('预报解密失败', e); }
-    finally { s.remove(); if (tab === 'forecast' && fcMode === 'live') afDraw(); }
-  };
-  s.onerror = () => { s.remove(); if (tab === 'forecast' && fcMode === 'live') afDraw(); };
-  document.head.appendChild(s);
+// 测试数据（publish_forecast.py --test 写的 forecast/test.js）并入列表并标红；网页上“清除测试数据”按批次（generated）隐藏，记在本机
+const AF_HIDE_KEY = 'flood_viewer_hide_test_fc';
+async function afFetch() {
+  const load = src => new Promise(ok => { const s = document.createElement('script'); s.src = src + '?t=' + Date.now(); s.onload = s.onerror = () => { s.remove(); ok(); }; document.head.appendChild(s); });
+  await load('forecast/latest.js');
+  try {                                                  // 发布版预报和图层一并加密，登录后在浏览器中解开
+    if (ENCRYPTED && window.ENC_FORECAST) {
+      window.FLOOD_FC = JSON.parse(new TextDecoder().decode(await decryptB64(window.ENC_FORECAST)));
+      delete window.ENC_FORECAST;
+    }
+  } catch (e) { console.error('预报解密失败', e); }
+  window.FLOOD_FC_TEST = null;
+  await load('forecast/test.js');
+  afMerge();
+  if (isLive()) afDraw();
+}
+function afMerge() {
+  const T = window.FLOOD_FC_TEST;
+  if (!window.FLOOD_FC && !(T && T.runs.length)) return;
+  const F = window.FLOOD_FC = window.FLOOD_FC || { runs: [], schedule: T.schedule };
+  F.runs = F.runs.filter(r => !r.test);
+  AF.test = T && T.runs.length && localStorage.getItem(AF_HIDE_KEY) !== T.generated ? T : null;
+  if (AF.test) F.runs = F.runs.concat(T.runs.map(r => ({ ...r, test: true }))).sort((a, b) => a.run_utc < b.run_utc ? 1 : a.run_utc > b.run_utc ? -1 : 0);
+}
+function afClearTest() {
+  if (!AF.test || !confirm('隐藏这批测试数据？\n只在本机网页隐藏；要删除文件，双击 HTML/viewer/清除预报测试数据.bat')) return;
+  localStorage.setItem(AF_HIDE_KEY, AF.test.generated);
+  afMerge(); AF.id = null; afDraw();
 }
 const afLv = r => (r.alerts || []).length ? 3 : r.status === 'model_done' ? 2 : r.beijing_max_cell_mm >= 10 ? 1 : 0;
 const AF_BADGE = ['#8a8f98', '#d4a017', '#e67e22', '#c0392b'];
@@ -1296,9 +1498,11 @@ function afNext() {                                     // 下次计划运行时
   return `${String(nx.getHours()).padStart(2, '0')}:${String(nx.getMinutes()).padStart(2, '0')}`;
 }
 const afSteps = (L2, unit) => L2.map(([lo, c], i) => `<div><i style="background:${c}"></i>${i + 1 < L2.length ? `${lo} – ${L2[i + 1][0]}` : `≥ ${lo}`} ${unit}</div>`).join('');
-function afDraw() {
+function afDraw() { afDraw0(); if (isLive() && D) renderPoints(); }
+function afDraw0() {
   const F = window.FLOOD_FC;
   afLayer.clearLayers(); AF.ov = null;
+  afTest.innerHTML = AF.test ? `<div class="afTest"><b>测试数据，不是真实预报</b>${AF.test.note ? `<span>${esc(AF.test.note)}</span>` : ''}<button class="btn" onclick="afClearTest()">清除测试数据</button></div>` : '';
   const empty = !F || !F.runs.length;
   [afCmp, afLy, afDay, afRun.parentElement].forEach(e => e.style.display = empty ? 'none' : '');   // .seg/.row 的 display 会盖过 hidden
   if (empty) { afBadge.innerHTML = afInfo.innerHTML = afLegend.innerHTML = afAlerts.innerHTML = afAge.textContent = ''; afInfo.innerHTML = '<div class="nc-note">尚无自动预报结果</div>'; return; }
@@ -1314,10 +1518,10 @@ function afDraw() {
     `已运行洪涝模型（${top.source}），无超阈文物点`, `超阈文物点 ${(top.alerts || []).length} 处（${top.source}）`][lv]}</div>`;
   const fin = Math.max(...latest.map(x => pTime(x.finished).getTime())), age = (Date.now() - fin) / 3600e3, stale = age > AF_STALE_H;
   afAge.innerHTML = `<span style="color:${stale ? '#c00' : '#888'}">${age < 1 ? '1 h 内' : age.toFixed(0) + ' h 前'}更新${stale ? '，请检查计划任务' : ''} · 下次 ${afNext()}</span>`;
-  afCmp.tBodies[0].innerHTML = latest.map(x => `<tr data-s="${x.source}" class="${x.source === AF.src ? 'on' : ''}"><td>${x.source}</td><td>${fmtT(x.start_local)}</td>`
+  afCmp.tBodies[0].innerHTML = latest.map(x => `<tr data-s="${x.source}" class="${x.source === AF.src ? 'on' : ''}"><td${x.test ? ' style="color:#c0392b" title="测试数据"' : ''}>${x.source}${x.test ? '*' : ''}</td><td>${fmtT(x.start_local)}</td>`
     + `<td class="num">${x.beijing_mean_mm.toFixed(1)}</td><td class="num">${x.beijing_max_cell_mm.toFixed(1)}</td><td style="color:${AF_BADGE[afLv(x)]}">${afModel(x)}</td></tr>`).join('');
   [...afCmp.tBodies[0].rows].forEach(tr => tr.onclick = () => { AF.src = tr.dataset.s; AF.id = null; afDraw(); });
-  afRun.innerHTML = list.map(x => `<option value="${x.id}"${x.id === AF.id ? ' selected' : ''}>${x.source} ${fmtT(x.start_local)} 起报 · ${afModel(x)}</option>`).join('');
+  afRun.innerHTML = list.map(x => `<option value="${x.id}"${x.id === AF.id ? ' selected' : ''}>${x.test ? '【测试】' : ''}${x.source} ${fmtT(x.start_local)} 起报 · ${afModel(x)}</option>`).join('');
   afRun.onchange = () => { AF.id = afRun.value; afDraw(); };
   // 选中起报的详情
   const nd = [1, 2, 3].filter(k => r.layers['rain_d' + k]);
@@ -1341,7 +1545,7 @@ function afDraw() {
   afInfo.innerHTML = `<div>${r !== list[0] ? '<span style="color:#c0392b">历史起报</span> ' : ''}${r.source} ${fmtT(r.start_local)} — ${fmtT(r.stop_local)}</div>`
     + (topd.length ? `<div>${AF.day ? `第 ${AF.day} 天` : '72 h'} 雨量较大：${topd.map(([k, v]) => `${esc(k)} ${v.toFixed(1)}`).join('、')} mm</div>` : '')
     + (r.case ? `<div>积水 ≥ 0.15 m ${r.flood015_km2.toFixed(0)} km²，危险性 ≥ 3 级 ${rk.toFixed(0)} km²</div><div class="nc-note" style="color:#b35c00">从干地起算，起报前已下的雨未计入，连续降雨时可能偏低</div>` : '')
-    + svg + (F.smoke ? '<div class="nc-note" style="color:#c00">测试数据：含冒烟算例</div>' : '');
+    + svg;
   const lys = [['rain', '雨量'], ['hgnd', '最大水深'], ['risk', '危险性'], ['off', '不显示']].filter(([k]) => k === 'off' || r.layers[k]);
   if (!lys.some(([k]) => k === AF.ly)) AF.ly = 'rain';
   drawSeg(afLy, lys, AF.ly, v => { AF.ly = v; afDraw(); });
@@ -1363,12 +1567,239 @@ function afDraw() {
   afAlerts.innerHTML = `<div style="margin-top:8px;font-weight:bold">超阈文物点 ${al.length} 处</div>`
     + (al.length ? `<div style="max-height:260px;overflow-y:auto"><table id="afAlert"><thead><tr><th>名称</th><th>区</th><th class="num">危险性</th><th class="num">漫岸 m</th></tr></thead><tbody>`
       + al.map(a => `<tr><td>${esc(a.name)}</td><td>${esc(a.district)}</td><td class="num">${a.risk ? chip(a.risk) : '—'}</td><td class="num">${over(a)}</td></tr>`).join('') + '</tbody></table></div>' : '');
-  const mk = al.map(a => L.circleMarker([a.lat, a.lng], { radius: 7, color: '#222', weight: 1.5, fillColor: a.risk ? RISK_COLORS[a.risk] : '#3182bd', fillOpacity: 1 })
-    .bindPopup(`<div class="pop"><b>${esc(a.name)}</b><br>${esc(a.level)}<br>${r.source} ${fmtT(r.start_local)} 起报`
-      + (a.risk ? `<br>50 m 内危险性 ${a.risk} 级，最大水深 ${fmt(a.h)} m` : '')
-      + (a.river_over != null ? `<br>${a.river_r} m 内河道最高水位高出文物地面 ${a.river_over.toFixed(2)} m（河道水深 ${fmt(a.river_h)} m，含下切）` : '') + '</div>').addTo(afLayer));
-  if (al.length) [...afAlert.tBodies[0].rows].forEach((tr, i) => tr.onclick = () => { map.setView([al[i].lat, al[i].lng], 15); mk[i].openPopup(); });
+  if (al.length) [...afAlert.tBodies[0].rows].forEach((tr, i) => tr.onclick = () => ptOpen(al[i]));
 }
+
+
+// ---------- 舆情分析 · 右侧“实时舆情”面板（管理员审核）：读 舆情数据/自动抓取/candidates.js（crawl_news.py 生成），人工核对后加入舆情数据 ----------
+// 审核记录只存本机浏览器（RV_KEY），可备份为 JSON；登录只在浏览器内校验 PBKDF2 哈希（admin_account.js），用于防误操作
+const RV_KEY = 'flood_viewer_review_v1';
+const RV = { on: sessionStorage.getItem('flood_admin') === '1', view: 'pending', sel: null, auto: true, pick: false, hover: false, endAt: 0, timer: null, edit: {}, mk: null };
+let rvDec = JSON.parse(localStorage.getItem(RV_KEY) || '{}');      // id → {status: 'ok' | 'no', at, post}
+const rvSaveDec = () => localStorage.setItem(RV_KEY, JSON.stringify(rvDec));
+const rvLayer = L.layerGroup();
+const RV_MAN_KEY = 'flood_viewer_review_manual_v1';
+let rvMan = JSON.parse(localStorage.getItem(RV_MAN_KEY) || '[]');   // 手动添加的条目（微博、抖音、小红书等人工摘录），与抓取候选一起审核
+const rvManSave = () => localStorage.setItem(RV_MAN_KEY, JSON.stringify(rvMan));
+const rvItems = () => rvMan.concat((window.NEWS_CAND && window.NEWS_CAND.items) || []);
+const rvStatus = it => (rvDec[it.id] || {}).status || 'pending';
+const nowStr = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+async function rvCheck(user, pw) {
+  const A = window.ADMIN_ACCOUNT; if (!A) throw new Error('未配置管理员账号（运行 set_admin.py）');
+  const hex = b => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+  const uh = hex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(user)));
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: b64d(A.salt), iterations: A.iter, hash: 'SHA-256' }, base, 256);
+  return uh === A.user_sha256 && btoa(String.fromCharCode(...new Uint8Array(bits))) === A.hash;
+}
+rvGo.onclick = async () => {
+  rvMsg.textContent = '验证中…';
+  try {
+    if (await rvCheck(rvUser.value.trim(), rvPw.value)) { RV.on = true; sessionStorage.setItem('flood_admin', '1'); rvPw.value = ''; rvMsg.textContent = ''; rvEnter(); }
+    else rvMsg.textContent = '用户名或密码错误';
+  } catch (e) { rvMsg.textContent = e.message; }
+};
+rvOut.onclick = () => { RV.on = false; sessionStorage.removeItem('flood_admin'); rvEnter(); };
+function rvEnter() {
+  rvLogin.hidden = RV.on; rvFeed.hidden = rvCard.hidden = rvIO.hidden = !RV.on;
+  rvLayer.clearLayers(); clearInterval(RV.timer); RV.timer = null;
+  if (!RV.on) { setTimeout(() => rvUser.focus(), 0); return; }
+  rvFetch(); RV.timer = setInterval(rvFetch, 10 * 60e3);
+}
+function rvLeave() { clearInterval(RV.timer); RV.timer = null; RV.pick = false; map.getContainer().classList.remove('picking'); }
+function rvFetch() {
+  const s = document.createElement('script');
+  s.src = '舆情数据/自动抓取/candidates.js?t=' + Date.now();
+  s.onload = s.onerror = () => { s.remove(); if (tab === 'opinion' && RV.on) rvDraw(); };
+  document.head.appendChild(s);
+}
+function rvList_() {
+  const q = rvQ.value.trim();
+  return rvItems().filter(it => rvStatus(it) === RV.view && (!rvEvOnly.checked || !it.flags.includes('未见灾情描述'))
+    && (!q || `${it.title} ${it.snippet} ${it.source} ${it.district} ${it.places.join(' ')}`.includes(q)))
+    .sort((a, b) => RV.view === 'pending' ? (!!b.manual - !!a.manual || (b.published > a.published ? 1 : -1)) : (rvDec[b.id].at > rvDec[a.id].at ? 1 : -1));   // 待审：手动添加的排在前面
+}
+const rvLoc = it => { const d = rvDec[it.id], e = RV.edit[it.id]; return d && d.post ? d.post : e && e.lat ? e : it.suggest; };
+function rvDraw() {
+  const C = window.NEWS_CAND;
+  rvStat.textContent = C ? `${fmtT(C.generated)} 抓取 · 新增 ${C.new}` : '尚无抓取结果';
+  const n = { pending: 0, ok: 0, no: 0 }; rvItems().forEach(it => n[rvStatus(it)]++);
+  drawSeg(rvView, [['pending', `待审 ${n.pending}`], ['ok', `已通过 ${n.ok}`], ['no', `已排除 ${n.no}`]], RV.view, v => { RV.view = v; RV.sel = null; rvList.scrollTop = 0; rvDraw(); });
+  rvAuto.textContent = RV.auto ? '⏸' : '▶';
+  const L2 = rvList_(), gen = C ? C.generated.slice(0, 16) : '';
+  rvList.innerHTML = L2.length ? L2.map(it => `<div class="it${it.id === RV.sel ? ' on' : ''}" data-id="${it.id}">
+      <div class="meta">${it.manual ? '<span class="tag">手动</span>' : it.fetched === gen ? '<span class="tag new">新</span>' : ''}${esc(fmtT(it.published))} · ${esc(it.source)}</div>
+      <div>${esc(it.title)}</div>
+      <div>${it.district ? `<span class="tag">${esc(it.district)}</span>` : ''}${rvLoc(it) ? '<span class="tag ok">有定位</span>' : ''}${it.categories.slice(0, 2).map(c => `<span class="tag">${esc(c)}</span>`).join('')}`
+      + `${it.flags.filter(f => f !== '未识别所在区').map(f => `<span class="tag warn">${esc(f)}</span>`).join('')}${it.dup_of ? '<span class="tag warn">疑似重复</span>' : ''}</div></div>`).join('')
+    : '<div class="nc-note" style="padding:6px">无</div>';
+  rvList.querySelectorAll('.it').forEach(el => el.onclick = () => { if (!isLive()) setLive(true); RV.sel = el.dataset.id; RV.pick = false; rvDraw(); });
+  rvLayer.clearLayers(); RV.mk = null;
+  const col = { pending: '#e67e22', ok: '#1a9850', no: '#9e9e9e' }[RV.view];
+  L2.forEach(it => { const p = rvLoc(it); if (!p || it.id === RV.sel) return;
+    L.circleMarker([p.lat, p.lng], { radius: 6, color: '#222', weight: 1, fillColor: col, fillOpacity: .9 }).bindTooltip(esc(it.title)).on('click', () => { RV.sel = it.id; rvDraw(); }).addTo(rvLayer); });
+  rvCardDraw();
+}
+function rvCardDraw() {
+  if (RV.sel === '__new__') return rvNewForm();
+  const it = rvItems().find(x => x.id === RV.sel);
+  if (!it) { rvCard.innerHTML = ''; return; }
+  const dec = rvDec[it.id], st = rvStatus(it);
+  const E = RV.edit[it.id] ||= dec && dec.post ? { ...dec.post } : {
+    time: it.event_time, prec: it.time_prec, category: it.categories[0] || '', place: rvBestPlace(it.places),
+    content: it.manual ? it.snippet : it.title + (it.evidence[0] && !it.title.includes(it.evidence[0]) ? '：' + it.evidence[0] : ''),
+    lat: it.suggest ? it.suggest.lat : null, lng: it.suggest ? it.suggest.lng : null, how: it.suggest ? it.suggest.how : '' };
+  const u = safeUrl(it.url), cats = ['积水内涝', '交通中断', '河道漫溢', '山洪', '冲毁', '人员被困', '文物受损'];
+  rvCard.innerHTML = `<div style="border-top:1px solid #e3e3e3;padding-top:6px;display:flex"><span style="flex:1"></span><button class="btn" id="rvClose" title="关闭">×</button></div><h2 style="margin:0 0 2px;font-size:14px">${u ? `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(it.title)}</a>` : esc(it.title)}</h2>
+    <div class="meta" style="color:#888;font-size:12px">${esc(it.source)} · 发布 ${esc(it.published)} · ${esc(it.via)} · ${esc(it.article)}${st !== 'pending' ? ` · ${st === 'ok' ? '已通过' : '已排除'} ${esc(dec.at)}` : ''}</div>
+    ${it.snippet ? `<div style="font-size:13px;margin-top:4px">${esc(it.snippet)}</div>` : ''}
+    ${it.evidence.map(e => `<div class="ev">${esc(e)}</div>`).join('')}
+    ${it.places.length ? `<div style="margin-top:4px;font-size:12px;color:#888">识别地名 ${it.places.map(p => `<span class="chip">${esc(p)}</span>`).join('')}</div>` : ''}
+    <label>事件时间<div class="row" style="gap:4px"><input id="rvT" value="${esc(E.time)}" style="flex:2"><select id="rvP" style="flex:1">${['时刻', '日', '发布时刻'].map(x => `<option${x === E.prec ? ' selected' : ''}>${x}</option>`).join('')}</select></div></label>
+    <label>类别<input id="rvC" list="rvCats" value="${esc(E.category)}"><datalist id="rvCats">${cats.map(c => `<option>${c}</option>`).join('')}</datalist></label>
+    <label>地点<input id="rvPl" value="${esc(E.place)}"></label>
+    <label>内容<textarea id="rvCo" rows="3">${esc(E.content)}</textarea></label>
+    <div class="row" style="margin-top:6px;gap:6px;font-size:13px"><span id="rvLL" style="flex:1">${E.lat != null ? `${(+E.lat).toFixed(5)}, ${(+E.lng).toFixed(5)}<br><span style="color:#888">${esc(E.how || '人工取点')}</span>` : '<span style="color:#c00">未定位</span>'}</span>
+      <button class="btn${RV.pick ? ' on' : ''}" id="rvPick">${RV.pick ? '点击地图…' : '地图取点'}</button></div>
+    <div class="row" style="margin-top:8px;gap:6px">${st === 'pending' ? '<button class="btn pri" id="rvOk">通过</button><button class="btn" id="rvNo">排除</button>' : '<button class="btn" id="rvUndo">撤销审核</button>'}${it.manual && st === 'pending' ? '<button class="btn" id="rvDel" style="margin-left:auto">删除</button>' : ''}</div>`;
+  const bind = (id, k) => { const el = document.getElementById(id); el.oninput = el.onchange = () => { E[k] = el.value; }; };
+  bind('rvT', 'time'); bind('rvP', 'prec'); bind('rvC', 'category'); bind('rvPl', 'place'); bind('rvCo', 'content');
+  rvCard.querySelectorAll('.chip').forEach(c => c.onclick = () => { E.place = rvPl.value = c.textContent; });
+  rvClose.onclick = () => { RV.sel = null; RV.pick = false; map.getContainer().classList.remove('picking'); rvDraw(); };
+  rvPick.onclick = () => { RV.pick = !RV.pick; map.getContainer().classList.toggle('picking', RV.pick); rvCardDraw(); };
+  if (window.rvOk) rvOk.onclick = () => rvDecide(it, 'ok');
+  if (window.rvNo) rvNo.onclick = () => rvDecide(it, 'no');
+  if (window.rvUndo) rvUndo.onclick = () => rvUndoIt(it);
+  if (window.rvDel) rvDel.onclick = () => { if (!confirm('删除这条手动添加的记录？')) return; rvMan = rvMan.filter(x => x.id !== it.id); rvManSave(); delete RV.edit[it.id]; RV.sel = null; rvDraw(); };
+  if (RV.mk) rvLayer.removeLayer(RV.mk);
+  RV.mk = null;
+  if (E.lat != null) {
+    RV.mk = L.marker([E.lat, E.lng], { draggable: st === 'pending' }).addTo(rvLayer);
+    RV.mk.on('dragend', ev => rvSetLoc(ev.target.getLatLng()));
+    if (!map.getBounds().contains([E.lat, E.lng])) map.panTo([E.lat, E.lng]);
+  }
+}
+// 手动添加：粘贴微博、抖音、小红书等帖子的文字与链接，按规则给出所在区、地名、事件时间、类别建议，之后与抓取候选同样审核
+const RV_EVENT = ['积水', '内涝', '被淹', '淹没', '漫溢', '漫堤', '冲毁', '冲断', '断路', '被困', '转移', '坍塌', '垮塌', '塌方', '山洪', '泥石流', '水毁', '决口', '封闭', '绕行', '停运', '倒灌', '进水', '漏雨'];
+const RV_CATS = [['冲毁', /冲毁|冲断|损毁|垮塌|坍塌|水毁/], ['山洪', /山洪|泥石流|滑坡|塌方/], ['河道漫溢', /漫溢|漫堤|决口|倒灌/], ['交通中断', /断路|封闭|交通管制|绕行|停运|中断/],
+  ['人员被困', /被困|转移|救援/], ['积水内涝', /积水|内涝|被淹|淹没|进水/], ['文物受损', /文物|古建|遗址|漏雨/]];
+const RV_SUF = /(立交桥|地铁站|大街|胡同|立交|街道|社区|小区|公园|水库|大道|环路|高速|大桥|路|街|桥|村|镇|乡|河|沟|峪|站|闸|坝|堤)/g;
+const RV_BOUND = new Set('的了在是于至到从经过往向沿及与对将已被受因为把让请次翻越致使该这那其每各等个条处些位有无据称');
+function rvExtract(text, pub) {
+  const sents = text.split(/[。！？!?\n；;]/).map(x => x.trim()).filter(Boolean), ev = sents.filter(x => RV_EVENT.some(k => x.includes(k)));
+  const pool = (ev.length ? ev : sents).join('\n'), dn = D ? distNames() : [];
+  const cnt = dn.map(d => [d, pool.split(d).length - 1 + pool.split(d.replace(/区$/, '')).length - 1]).sort((a, b) => b[1] - a[1]);
+  const district = cnt.length && cnt[0][1] ? cnt[0][0] : '';
+  const places = [];
+  for (const x of ev.slice(0, 20)) for (const m of x.matchAll(RV_SUF)) {
+    let j = m.index; while (j > 0 && m.index - j < 14 && /[\u4e00-\u9fa5\d]/.test(x[j - 1]) && !RV_BOUND.has(x[j - 1])) j--;
+    let nm = x.slice(j, m.index + m[0].length);
+    for (const d of dn) { const sh = d.replace(/区$/, ''); if (nm.startsWith(d)) nm = nm.slice(d.length); else if (nm.startsWith(sh) && nm.length > sh.length + 2) nm = nm.slice(sh.length); }
+    nm = nm.replace(/^(北京市?|市|和|及|与|或)+/, '');
+    const inner = [...nm.matchAll(/(镇|乡|街道|地区|路|街)/g)].map(k => k.index + k[0].length).filter(e => e < nm.length - 2);
+    for (const c of [nm, inner.length ? nm.slice(inner[inner.length - 1]) : ''])          // 另取最后一个内部后缀之后的部分，如“琉璃河镇李庄铁道桥”→“李庄铁道桥”
+      if (c.length >= 3 && !/(道路|河道|铁路|公路|线路|马路)$/.test(c) && !places.includes(c) && !dn.includes(c)) places.push(c);
+  }
+  let et = pub, prec = '发布时刻';
+  const p0 = pTime(pub);
+  for (const x of ev.length ? ev : sents) {
+    const m = x.match(/(\d{1,2})月(\d{1,2})日\s*(凌晨|早晨|早上|上午|中午|下午|傍晚|晚上|晚间|夜间|夜里|午后)?\s*(?:(\d{1,2})(?:时|点|:|：)(\d{1,2})?)?/);
+    if (!m) continue;
+    const mo = +m[1], d = +m[2]; let h = m[4] ? +m[4] : 0;
+    if (/下午|傍晚|晚上|晚间|夜间|夜里|午后/.test(m[3] || '') && h < 12) h += 12;
+    const y = isNaN(p0) ? new Date().getFullYear() : (mo * 100 + d <= (p0.getMonth() + 1) * 100 + p0.getDate() ? p0.getFullYear() : p0.getFullYear() - 1);
+    const p = n => String(n).padStart(2, '0');
+    et = `${y}-${p(mo)}-${p(d)} ${p(Math.min(h, 23))}:${p(+(m[5] || 0))}`; prec = m[4] ? '时刻' : '日'; break;
+  }
+  return { district, places: places.slice(0, 8), categories: RV_CATS.filter(([, re]) => re.test(pool)).map(([c]) => c),
+    flags: ev.length ? [] : ['未见灾情描述'], event_time: et, time_prec: prec, evidence: ev.slice(0, 6).map(x => x.slice(0, 160)) };
+}
+function rvNewForm() {
+  rvCard.innerHTML = `<div style="border-top:1px solid #e3e3e3;padding-top:6px;display:flex;align-items:center"><b style="flex:1">手动添加</b><button class="btn" id="rvClose" title="关闭">×</button></div>
+    <label>平台<div class="row" style="gap:4px"><select id="nwP" style="flex:1">${['微博', '抖音', '小红书', '微信公众号', '快手', 'B站', '今日头条', '新闻网站', '其他'].map(x => `<option>${x}</option>`).join('')}</select>
+      <input id="nwPo" placeholder="平台名称" style="flex:1;display:none"></div></label>
+    <label>链接<input id="nwU" placeholder="https://…"></label>
+    <label>发布时间<input id="nwT" value="${nowStr()}"></label>
+    <label>帖子文字<textarea id="nwX" rows="5" placeholder="粘贴帖子或报道原文"></textarea></label>
+    <div class="row" style="margin-top:8px;gap:6px"><button class="btn pri" id="nwOk">添加到待审</button></div>
+    <div class="nc-note">只摘录与灾情有关的文字，不录用户名、头像等个人信息；添加后在下方修改地点、地图取点，再审核</div>`;
+  rvClose.onclick = () => { RV.sel = null; rvDraw(); };
+  nwP.onchange = () => { nwPo.style.display = nwP.value === '其他' ? '' : 'none'; if (nwP.value === '其他') nwPo.focus(); };
+  nwOk.onclick = () => {
+    const text = nwX.value.trim(), url = nwU.value.trim(), pub = nwT.value.trim();
+    if (!text) return alert('请粘贴帖子文字');
+    if (url && !safeUrl(url)) return alert('链接应以 http:// 或 https:// 开头');
+    if (isNaN(pTime(pub))) return alert('发布时间格式应为 YYYY-MM-DD HH:MM');
+    if (url && rvItems().some(x => x.url === url)) return alert('这条链接已在列表中');
+    const it = { id: 'm' + Date.now().toString(36), manual: true, title: text.replace(/\s+/g, ' ').slice(0, 40) + (text.length > 40 ? '…' : ''), url,
+      source: nwP.value === '其他' ? (nwPo.value.trim() || '其他') : nwP.value, via: '手动添加', published: pub, fetched: nowStr(), snippet: text.slice(0, 500), article: '手动录入',
+      suggest: null, dup_of: null, ...rvExtract(text, pub) };
+    rvMan.unshift(it); rvManSave(); RV.view = 'pending'; RV.sel = it.id; rvDraw();
+  };
+}
+rvAdd.onclick = () => { if (!isLive()) setLive(true); RV.sel = '__new__'; RV.pick = false; rvDraw(); };
+const rvBestPlace = ps => [...ps].sort((a, b) => { const r = p => /(桥|村|站|立交|闸|坝|小区|社区|公园)$/.test(p) ? 0 : /(路|街|大道|胡同|环路)$/.test(p) ? 1 : 2; return r(a) - r(b) || a.length - b.length; })[0] || '';   // 点状地名优先
+function rvSetLoc(ll) {
+  const E = RV.edit[RV.sel]; if (!E || rvStatus({ id: RV.sel }) !== 'pending') return;
+  E.lat = +ll.lat.toFixed(6); E.lng = +ll.lng.toFixed(6); E.how = '人工取点';
+  RV.pick = false; map.getContainer().classList.remove('picking'); rvCardDraw();
+}
+function rvDecide(it, status) {
+  const E = RV.edit[it.id];
+  if (status === 'ok') {
+    if (E.lat == null) return alert('请先在地图上取点定位');
+    if (isNaN(pTime(E.time))) return alert('事件时间格式应为 YYYY-MM-DD HH:MM');
+    if (!E.content.trim()) return alert('内容不能为空');
+    const post = { time: E.time.trim(), platform: it.source, category: E.category.trim(), content: E.content.trim(), place: E.place.trim(), lat: +E.lat, lng: +E.lng, url: it.url };
+    if (!posts.some(o => o.time + '|' + o.content === post.time + '|' + post.content)) { posts.push(post); opSave(); }
+    rvDec[it.id] = { status, at: nowStr(), post: { ...post, prec: E.prec, how: E.how || '人工取点', published: it.published } };
+  } else rvDec[it.id] = { status, at: nowStr() };
+  rvSaveDec();
+  const L2 = rvList_(); RV.sel = L2.length ? L2[0].id : null;     // 自动跳到下一条待审
+  rvDraw();
+}
+function rvUndoIt(it) {
+  const d = rvDec[it.id]; if (!d) return;
+  if (d.status === 'ok' && !confirm('撤销后，该条将从舆情数据中移除。继续？')) return;
+  if (d.post) { posts = posts.filter(o => !(o.url === d.post.url && o.time === d.post.time && o.content === d.post.content)); opSave(); }
+  delete rvDec[it.id]; rvSaveDec(); delete RV.edit[it.id]; RV.view = 'pending'; rvDraw();
+}
+rvEvOnly.onchange = rvQ.oninput = () => rvDraw();
+rvFold.onclick = () => { const f = rvPanel.classList.toggle('fold'); rvFold.textContent = f ? '＋' : '－'; rvFold.title = f ? '展开' : '收起'; };
+L.DomEvent.disableClickPropagation(rvPanel); L.DomEvent.disableScrollPropagation(rvPanel);
+rvAuto.onclick = () => { RV.auto = !RV.auto; rvAuto.textContent = RV.auto ? '⏸' : '▶'; };
+rvList.onmouseenter = () => { RV.hover = true; }; rvList.onmouseleave = () => { RV.hover = false; };
+setInterval(() => {                                     // 待审列表自动滚动；鼠标悬停或已选中条目时暂停，到底停 3 s 后回到顶部
+  if (tab !== 'opinion' || rvPanel.classList.contains('fold') || !RV.on || !RV.auto || RV.hover || RV.sel || RV.view !== 'pending') return;
+  const el = rvList; if (el.scrollHeight <= el.clientHeight + 2) return;
+  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 1) { if (!RV.endAt) RV.endAt = Date.now(); else if (Date.now() - RV.endAt > 3000) { el.scrollTop = 0; RV.endAt = 0; } }
+  else el.scrollTop += 1;
+}, 60);
+const ymd = () => nowStr().slice(0, 10).replace(/-/g, '');
+rvExp.onclick = () => {
+  const ok = Object.values(rvDec).filter(d => d.status === 'ok' && d.post); if (!ok.length) return alert('还没有通过的条目');
+  const head = ['时间', '平台', '类别', '内容', '地点', '经度', '纬度', '链接', '事件', '时间精度', '定位依据', '报道发布时间'];
+  const rows = ok.map(({ post: o }) => [o.time, o.platform, o.category, o.content, o.place, o.lng, o.lat, o.url, o.time.slice(0, 7), o.prec, o.how, o.published]);
+  download(`舆情审核_已通过_${ymd()}.csv`, '﻿' + [head, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n'), 'text/csv');
+};
+rvSave.onclick = () => download(`舆情审核记录_${ymd()}.json`, JSON.stringify({ decisions: rvDec, manual: rvMan }, null, 1), 'application/json');
+rvIn.onchange = async () => {
+  const f = rvIn.files[0]; if (!f) return;
+  try {
+    const raw = JSON.parse(await f.text()), j = raw.decisions || raw; let n = 0;   // 兼容只含审核记录的旧备份
+    for (const m of raw.manual || []) if (m && m.id && !rvMan.some(x => x.id === m.id)) { rvMan.push(m); n++; }
+    rvManSave();
+    for (const [id, d] of Object.entries(j)) {
+      if (!d || !['ok', 'no'].includes(d.status)) continue;
+      rvDec[id] = d; n++;
+      if (d.post && !posts.some(o => o.time + '|' + o.content === d.post.time + '|' + d.post.content)) {
+        const { prec, how, published, ...p } = d.post; posts.push(p);
+      }
+    }
+    rvSaveDec(); opSave(); rvDraw(); alert(`恢复 ${n} 条记录`);
+  } catch (e) { alert('恢复失败：' + e.message); }
+  rvIn.value = '';
+};
 
 function boot() { fillDatasets(); setTab('flood'); openDataset(IDX[0].id); }
 if (!ENCRYPTED) boot();
