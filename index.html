@@ -284,7 +284,7 @@
         <tbody></tbody>
       </table>
       <div id="ncDetail"></div>
-      <div class="nc-note">回放：500 m 雷达临近预报、CLDAS 实况和不下雨三种情况，分别从同一时刻的模拟状态出发计算 3 h，以 CLDAS 结果为参照（不是实测）；雨量为北京市面平均。“不下雨”一列的 CSI 高于预报时，说明预报降雨没有带来额外信息</div>
+      <div class="nc-note">回放：500 m 雷达临近预报、CLDAS 实况和不下雨三种情况，分别从同一时刻的模拟状态出发计算 3 h，以 CLDAS 结果为参照（不是实测）；雨量为北京市面平均。CSI 按 1 km 邻域计：预报与实况的新增积水相距 1 km 以内即算命中（CLDAS 约 6 km、预报 500 m，逐格对位过严）。“不下雨”一列的 CSI 高于预报时，说明预报降雨没有带来额外信息</div>
     </section>
     <section id="ncPtSec" data-tab="forecast" class="hs">
       <h2>文物点位周边 <span id="ncRad" style="font-weight:normal;color:#888;font-size:13px"></span></h2>
@@ -674,12 +674,12 @@ const NC_TAGS = [['cont', '新增积水对比'], ['fc', '预报水深'], ['ob', 
 let ncKey = null, ncTag = 'cont';
 const isNc = () => kind.startsWith('nc_');
 const ncLayer = L.layerGroup();
-const NC_CAT = { 1: ['命中', '#4575b4'], 2: ['漏报', '#fdae61'], 3: ['空报', '#d73027'] };
+const NC_CAT = { 1: ['命中', '#4575b4'], 4: ['偏差 ≤ 1 km', '#91bfdb'], 2: ['漏报', '#fdae61'], 3: ['空报', '#d73027'] };
 function ncZone(lat, lng, k) {                           // 半径内：预报/实况 3 h 最大水深，新增积水类别计数
   const [x0, y0] = proj4('EPSG:4326', 'EPSG:32650', [lng, lat]);
   const [a, , c, , e, f] = D.grid.transform, W = D.grid.width, H = D.grid.height, R = radius;
   const gf = G[`nc_${k}_fc`], go = G[`nc_${k}_ob`], gc = G[`nc_${k}_cont`];
-  const o = { fc: null, ob: null, cat: { 1: 0, 2: 0, 3: 0 }, n: 0 };
+  const o = { fc: null, ob: null, cat: { 1: 0, 4: 0, 2: 0, 3: 0 }, n: 0 };
   if (!gf) return o;
   const c0 = Math.max(0, Math.floor((x0 - R - c) / a)), c1 = Math.min(W - 1, Math.floor((x0 + R - c) / a));
   const r0 = Math.max(0, Math.floor((y0 + R - f) / e)), r1 = Math.min(H - 1, Math.floor((y0 - R - f) / e));
@@ -703,19 +703,19 @@ function renderNowcast() {
   if (!ncKey) ncKey = N.items.reduce((a, b) => b.rise_ob_km2 > a.rise_ob_km2 ? b : a).key;   // 默认新增积水最多的一次
   drawSeg(layerSeg, NC_TAGS, ncTag, v => { ncTag = v; render(); });
   ncTab.tBodies[0].innerHTML = N.items.map(it => `<tr data-k="${it.key}" class="${it.key === ncKey ? 'on' : ''}">
-    <td>${tFmt(it.start_local)}</td><td class="num">${it.rain_fc_mm.toFixed(1)} / ${it.rain_ob_mm.toFixed(1)}</td><td class="num">${it.rise_csi.toFixed(2)}</td><td class="num" style="color:#888">${it.zero ? it.zero.csi.toFixed(2) : '—'}</td></tr>`).join('');
+    <td>${tFmt(it.start_local)}</td><td class="num">${it.rain_fc_mm.toFixed(1)} / ${it.rain_ob_mm.toFixed(1)}</td><td class="num">${it.nb.csi.toFixed(2)}</td><td class="num" style="color:#888">${it.nb.zero_csi.toFixed(2)}</td></tr>`).join('');
   [...ncTab.tBodies[0].rows].forEach(tr => tr.onclick = () => { ncKey = tr.dataset.k; render(); });
   const it = N.items.find(x => x.key === ncKey), L3 = it.rise_csi_by_lead;
   ncDetail.innerHTML = `<table style="margin-top:8px"><tr><th></th><th class="num">预报</th><th class="num">实况</th></tr>
     <tr><td>3 h 面雨量 mm</td><td class="num">${it.rain_fc_mm.toFixed(1)}</td><td class="num">${it.rain_ob_mm.toFixed(1)}</td></tr>
     <tr><td>新增积水 km²</td><td class="num">${it.rise_fc_km2.toFixed(0)}</td><td class="num">${it.rise_ob_km2.toFixed(0)}</td></tr></table>
-    <div style="margin-top:4px">新增积水：命中率 ${pct(it.rise_pod)}，空报率 ${pct(it.rise_far)}；CSI 按预见期 1 h ${L3['1h'].toFixed(2)} · 2 h ${L3['2h'].toFixed(2)} · 3 h ${L3['3h'].toFixed(2)}</div>` +
-    (it.zero ? `<div style="margin-top:4px">假设 3 h 不下雨，已有积水汇流也会产生 ${it.zero.rise_km2.toFixed(0)} km² 新增积水。扣除这部分后，降雨造成的新增积水实况 ${it.zero.rain_ob_km2.toFixed(0)} km²、预报 ${it.zero.rain_fc_km2.toFixed(0)} km²，命中率 ${pct(it.zero.rain_pod)}，CSI ${it.zero.rain_csi.toFixed(2)}</div>` : '');
+    <div style="margin-top:4px">新增积水（1 km 内算命中）：命中率 ${pct(it.nb.pod)}，空报率 ${pct(it.nb.far)}，CSI ${it.nb.csi.toFixed(2)}；逐 25 m 格严格对位 CSI ${it.rise_csi.toFixed(2)}（预见期 1 h ${L3['1h'].toFixed(2)} · 2 h ${L3['2h'].toFixed(2)} · 3 h ${L3['3h'].toFixed(2)}）</div>` +
+    (it.zero ? `<div style="margin-top:4px">假设 3 h 不下雨，已有积水汇流也会产生 ${it.zero.rise_km2.toFixed(0)} km² 新增积水。扣除这部分后，降雨造成的新增积水实况 ${it.zero.rain_ob_km2.toFixed(0)} km²、预报 ${it.zero.rain_fc_km2.toFixed(0)} km²，1 km 内命中率 ${pct(it.nb.rain_pod)}，CSI ${it.nb.rain_csi.toFixed(2)}（逐格 ${it.zero.rain_csi.toFixed(2)}）</div>` : '');
   ncRad.textContent = `半径 ${radius >= 1000 ? radius / 1000 + ' km' : radius + ' m'}`;
   const rows = PRESETS.filter(p => !curDist || p.district === curDist).map(p => ({ p, z: ncZone(p.lat, p.lng, ncKey) }))
     .filter(({ z }) => (z.fc ?? 0) >= 0.15 || (z.ob ?? 0) >= 0.15)
     .sort((a, b) => (b.z.fc ?? 0) - (a.z.fc ?? 0));
-  const catTxt = z => Object.entries(z.cat).filter(([, v]) => v).map(([k, v]) => `<span style="color:${NC_CAT[k][1]}">${NC_CAT[k][0]} ${v}</span>`).join(' ') || '—';
+  const catTxt = z => [1, 4, 2, 3].map(k => [k, z.cat[k]]).filter(([, v]) => v).map(([k, v]) => `<span style="color:${NC_CAT[k][1]}">${NC_CAT[k][0]} ${v}</span>`).join(' ') || '—';
   ncPt.tBodies[0].innerHTML = rows.length ? rows.map(({ p, z }) => `<tr class="pt"><td>${esc(p.name)}</td><td class="num">${fmt(z.fc)}</td><td class="num">${fmt(z.ob)}</td><td>${catTxt(z)}</td></tr>`).join('')
     : '<tr><td colspan="4" style="color:#888">无</td></tr>';
   [...ncPt.tBodies[0].rows].forEach((tr, i) => { if (rows[i]) tr.onclick = () => { map.setView([rows[i].p.lat, rows[i].p.lng], 14); ncLayer.getLayers()[i].openPopup(); }; });
