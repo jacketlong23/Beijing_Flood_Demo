@@ -278,11 +278,15 @@
       <h2>降雨情景模拟 <span id="scConn" style="font-weight:normal;font-size:13px"></span></h2>
       <div id="scOff" class="nc-note"></div>
       <div id="scBody">
-        <div class="nc-note" style="margin-top:0">在地图上点击添加雨团（可拖动），设定中心总雨量和半径（半径处约为中心的 10%）；按雨型分配到逐小时，再用洪涝模型（全市 100 m，干初始）计算。<b style="color:#c0392b">结果是假设情景，不是预报。</b></div>
+        <div class="nc-note" style="margin-top:0">在地图上点击添加雨团（可拖动），设定中心总雨量和半径（半径处约为中心的 10%）；按雨型分配到逐小时，再用洪涝模型（全市 100 m）计算。默认雨型取自北京市地方标准 DB11/T 969—2016，面向城镇建设区，点雨量未做面积折减。<b style="color:#c0392b">结果是假设情景，不是预报。</b></div>
         <div class="row" style="margin-top:6px"><button class="btn" id="scPick">在地图上添加雨团</button><button class="btn" id="scClr">清空</button></div>
-        <table id="scTab" style="margin-top:4px"><thead><tr><th>雨团</th><th class="num">总雨量 mm</th><th class="num">半径 km</th><th class="num" title="相对情景开始时刻">开始 h</th><th></th></tr></thead><tbody></tbody></table>
+        <table id="scTab" style="margin-top:4px"><thead><tr><th>雨团</th><th class="num">总雨量 mm</th><th class="num">半径 km</th><th class="num" title="相对情景开始时刻">开始 h</th><th title="DB11/T 969—2016 3.2.2 条">分区</th><th></th></tr></thead><tbody></tbody></table>
         <div class="row" style="margin-top:6px">降雨历时 <input type="number" id="scDur" min="1" max="48" value="6"> h，雨后再算 <input type="number" id="scTail" min="0" max="24" value="6"> h</div>
-        <div class="row" style="margin-top:4px">雨型 <select id="scPat"></select><span id="scPeakW">峰值位置 <input type="range" id="scPeak" min="0.1" max="0.9" step="0.05" value="0.4" style="width:80px"> <span id="scPeakV"></span></span></div>
+        <div class="row" style="margin-top:4px">雨型 <select id="scPat"></select><span id="scPeakW">峰值 <label title="Ⅰ 区 0.29、Ⅱ 区 0.71，取自规范 24 h 雨型；规范本身未规定芝加哥雨型"><input type="checkbox" id="scPeakAuto" checked>按分区</label> <input type="range" id="scPeak" min="0.1" max="0.9" step="0.05" value="0.7" style="width:80px"> <span id="scPeakV"></span></span></div>
+        <div class="row" id="scDesW" style="margin-top:4px">方法 <select id="scMeth"><option value="handbook">手册法</option><option value="formula">公式法</option></select> 重现期 <select id="scRp"><option value="auto">自动</option><option value="3">3 年</option><option value="5">5 年</option><option value="10">10 年</option><option value="20">20 年</option><option value="30">30 年</option><option value="50">50 年</option><option value="100">100 年</option></select></div>
+        <div class="row" style="margin-top:4px">雨团外背景雨 <select id="scBg"><option value="none">无</option><option value="uniform">全域均匀</option><option value="forecast">最新预报</option></select><span id="scBgMmW"> <input type="number" id="scBgMm" min="0.1" max="800" step="5" value="30"> mm</span><span id="scBgRunW"> <select id="scBgRun" style="max-width:190px"></select></span></div>
+        <div class="row" style="margin-top:4px">情景前先下 <input type="number" id="scAnteMm" min="0" max="800" step="10" value="0"> mm，历时 <input type="number" id="scAnteH" min="12" max="72" value="24"> h</div>
+        <div id="scZoneHint" class="nc-note" style="color:#b35c00"></div>
         <div class="row" style="margin-top:4px">空间扰动 <select id="scNoise"><option value="0">无（光滑）</option><option value="0.15" selected>中（约 ±15%）</option><option value="0.3">强（约 ±30%）</option></select></div>
         <div class="row" style="margin-top:4px">名称 <input id="scName" style="flex:1" maxlength="40" placeholder="如：房山西南 150 mm、东北 100 mm"></div>
         <div id="scPrev"></div>
@@ -964,7 +968,7 @@ function afOther(r) {                                    // 另一预报源中�
   return o.reduce((a, b) => d(b) < d(a) ? b : a);
 }
 const afAlerted = (r, name) => !!(r && (r.alerts || []).some(a => a.name === name));
-const afHour = (r, h) => { const d = new Date(pTime(r.start_local).getTime() + h * 3600e3); return `${d.getDate()}日${String(d.getHours()).padStart(2, '0')}时`; };
+const afHour = (r, h) => { if (r.scenario && h < 0) return '情景前已积水'; const d = new Date(pTime(r.start_local).getTime() + h * 3600e3); return `${d.getDate()}日${String(d.getHours()).padStart(2, '0')}时`; };
 // 调研修正（暂定，权重未标定）：本体高出周边 + 台基高度 → 本体有效水深；脆弱性三档；50 m 危险性 × 脆弱性 → 综合风险
 const CMB = { 1: ['低', '#1a9850'], 2: ['中', '#e6a100'], 3: ['高', '#d73027'] };
 const CMB_M = [[1, 1, 1], [1, 1, 1], [1, 1, 2], [2, 2, 3], [2, 3, 3], [3, 3, 3]];   // 行：危险性 0–5；列：脆弱性 低 / 中 / 高
@@ -1002,7 +1006,8 @@ function livePopup(p) {
   if (z) h += `<br>周边 ${rTxt()}：${z[0] == null ? '无积水' : `最大水深 ${fmt(z[0])} m，危险性 ${z[1]} 级，积水占比 ${pct(z[2])}`}`;
   if (z && z[3] != null) {
     const dt = (pTime(r.start_local).getTime() + z[3] * 3600e3 - Date.now()) / 3600e3;
-    h += `<br>预计 <b>${hh(z[3])}</b> 开始积水${dt > 0 ? `（约 ${dt.toFixed(0)} h 后）` : ''}，${hh(z[4])} 最深`;
+    const t4 = r.scenario && z[4] != null && z[4] < 0 ? '情景开始前' : hh(z[4]);
+    h += r.scenario && z[3] < 0 ? `<br><b>情景前已积水</b>，${t4} 最深` : `<br>预计 <b>${hh(z[3])}</b> 开始积水${dt > 0 ? `（约 ${dt.toFixed(0)} h 后）` : ''}，${t4} 最深`;
   }
   h += `<br>50 m 内：${z50 && z50[0] != null ? `最大水深 ${fmt(z50[0])} m，危险性 ${z50[1]} 级` : '无积水'}`;
   if (ro != null) h += `<br>${a.e.rr} m 内河道最高水位${ro >= 0 ? `<b>高出</b>文物地面 ${ro.toFixed(2)} m` : `低于文物地面 ${(-ro).toFixed(2)} m`}（河道水深 ${fmt(a.e.rh)} m，含下切）`;
@@ -1577,7 +1582,7 @@ function afDraw0() {
   const rk = r.risk_km2 ? [3, 4, 5].reduce((a, k) => a + (r.risk_km2[k] || 0), 0) : null;
   afInfo.innerHTML = (r.scenario ? scInfo(r) : `<div>${r !== list[0] ? '<span style="color:#c0392b">历史起报</span> ' : ''}${r.source} ${fmtT(r.start_local)} — ${fmtT(r.stop_local)}</div>`)
     + (topd.length ? `<div>${AF.day ? `第 ${AF.day} 天` : `${r.hours || 72} h`} 雨量较大：${topd.map(([k, v]) => `${esc(k)} ${v.toFixed(1)}`).join('、')} mm</div>` : '')
-    + (r.case ? `<div>积水 ≥ 0.15 m ${r.flood015_km2.toFixed(0)} km²，危险性 ≥ 3 级 ${rk.toFixed(0)} km²</div><div class="nc-note" style="color:#b35c00">从干地起算，起报前已下的雨未计入，连续降雨时可能偏低</div>` : '')
+    + (r.case ? `<div>积水 ≥ 0.15 m ${r.flood015_km2.toFixed(0)} km²，危险性 ≥ 3 级 ${rk.toFixed(0)} km²</div><div class="nc-note" style="color:#b35c00">${r.scenario && r.scenario.antecedent && r.scenario.antecedent.mm > 0 ? '最大水深和淹没范围是模型全过程最大值，含前期雨阶段' : '从干地起算，起报前已下的雨未计入，连续降雨时可能偏低'}</div>` : '')
     + svg;
   const lys = [['rain', '雨量'], ['vec', '淹没范围'], ['hgnd', '最大水深'], ['risk', '危险性'], ['off', '不显示']].filter(([k]) => k === 'vec' ? hasVec : k === 'off' || r.layers[k]);
   if (!lys.some(([k]) => k === AF.ly)) AF.ly = 'rain';
@@ -1623,17 +1628,31 @@ const SC_KEY = 'flood_viewer_scenario_draft_v1';
 const SC_STATE = { queued: ['排队', '#888'], preparing: ['生成降雨', '#1f5fbf'], waiting: ['等待其他模型', '#b35c00'], running: ['模型计算', '#1f5fbf'],
   exporting: ['导出', '#1f5fbf'], publishing: ['发布', '#1f5fbf'], done: ['完成', '#1a9850'], failed: ['失败', '#c0392b'], cancelled: ['已取消', '#888'] };
 const SC_COLORS = ['#1f5fbf', '#c0392b', '#1a9850', '#8e44ad', '#d35400', '#16a085', '#2c3e50', '#b8860b', '#e84393', '#7f8c8d', '#2980b9', '#6d214f'];
-const SC_PAT = { chicago: '芝加哥雨型', uniform: '均匀', 2023: '2023年7月雨型', 2024: '2024年7月雨型', 2025: '2025年7月雨型' };
+const SC_PAT = { design: '北京规范雨型', chicago: '芝加哥雨型', uniform: '均匀', 2023: '2023年7月过程（全市面平均，偏平）', 2024: '2024年7月过程（全市面平均，偏平）', 2025: '2025年7月过程（全市面平均，偏平）' };
+const SC_ZONE = { I: 'Ⅰ', II: 'Ⅱ' };
 SC = (() => { let d = null; try { d = JSON.parse(localStorage.getItem(SC_KEY)); } catch (e) { }
   return { pick: false, online: null, timer: null, list: [], seen: null, prevT: null, centers: (d && d.centers) || [], d: d || {} }; })();
 scLayer = L.layerGroup();
-scPat.innerHTML = Object.entries(SC_PAT).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
-[['scDur', 'rain_hours'], ['scTail', 'tail_hours'], ['scPat', 'pattern'], ['scPeak', 'peak'], ['scNoise', 'noise'], ['scName', 'name']]
+scPat.innerHTML = ['design', 'chicago', 'uniform', '2023', '2024', '2025'].map(k => `<option value="${k}">${SC_PAT[k]}</option>`).join('');   // 数字键在对象里会排到最前，这里显式排序
+[['scDur', 'rain_hours'], ['scTail', 'tail_hours'], ['scPat', 'pattern'], ['scPeak', 'peak'], ['scNoise', 'noise'], ['scName', 'name'], ['scMeth', 'design_method'], ['scRp', 'rp']]
   .forEach(([id, k]) => { if (SC.d[k] != null) document.getElementById(id).value = SC.d[k]; });
-function scGet() {
-  return { name: scName.value.trim(), rain_hours: +scDur.value, tail_hours: +scTail.value, pattern: scPat.value, peak: +scPeak.value, noise: +scNoise.value,
-    seed: 1, centers: SC.centers.map(c => ({ lat: +c.lat.toFixed(5), lng: +c.lng.toFixed(5), mm: +c.mm, r_km: +c.r_km, offset_h: +c.offset_h })) };
+scPeakAuto.checked = SC.d.peak == null;
+scSetExtra(SC.d.background, SC.d.antecedent);
+function scSetExtra(b, a) {                               // 草稿恢复、载入情景：背景雨与前期雨
+  b = b || {}; a = a || {};
+  scBg.value = b.mode || 'none'; if (b.mm) scBgMm.value = b.mm; SC.bgRun = b.run || null;
+  scAnteMm.value = a.mm || 0; if (a.hours) scAnteH.value = a.hours;
 }
+function scGet() {
+  const bg = scBg.value;
+  return { name: scName.value.trim(), rain_hours: +scDur.value, tail_hours: +scTail.value, pattern: scPat.value, design_method: scMeth.value, rp: scRp.value === 'auto' ? 'auto' : +scRp.value,
+    peak: scPeakAuto.checked ? null : +scPeak.value, noise: +scNoise.value, seed: 1,
+    background: { mode: bg, ...(bg === 'uniform' ? { mm: +scBgMm.value } : {}), ...(bg === 'forecast' ? { run: scBgRun.value || SC.bgRun } : {}) },
+    antecedent: { mm: +scAnteMm.value, hours: +scAnteH.value },
+    centers: SC.centers.map(c => ({ lat: +c.lat.toFixed(5), lng: +c.lng.toFixed(5), mm: +c.mm, r_km: +c.r_km, offset_h: +c.offset_h, zone: c.zone || 'II' })) };
+}
+function scDist(lat, lng) { return (D && D.boundary && districtOf(lat, lng)) || ''; }
+function scZoneDefault(lat, lng) { return /延庆/.test(scDist(lat, lng)) ? 'I' : 'II'; }   // 无乡镇边界，不做精确判定：延庆默认 Ⅰ，其余默认 Ⅱ
 function scSave() { try { localStorage.setItem(SC_KEY, JSON.stringify(scGet())); } catch (e) { } }
 async function scApi(path, body) {
   const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000);
@@ -1659,7 +1678,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && SC.pick) s
 scClr.onclick = () => { if (SC.centers.length && confirm('清空全部雨团？')) { SC.centers = []; scDraw(); } };
 function scAdd(ll) {
   if (SC.centers.length >= 12) return alert('雨团最多 12 个');
-  SC.centers.push({ lat: ll.lat, lng: ll.lng, mm: 100, r_km: 15, offset_h: 0 }); scDraw();
+  SC.centers.push({ lat: ll.lat, lng: ll.lng, mm: 100, r_km: 15, offset_h: 0, zone: scZoneDefault(ll.lat, ll.lng) }); scDraw();
 }
 function scDraw() {
   scLayer.clearLayers();
@@ -1670,21 +1689,32 @@ function scDraw() {
     [[1, .07, '4 4'], [.549, .1, null], [.354, .14, null]].forEach(([f, op, da]) =>                // 半径处 10%、0.55R 处 50%、0.35R 处 75%
       L.circle([c.lat, c.lng], { radius: R * f, color: col, weight: f === 1 ? 1.5 : 0, dashArray: da, fillColor: col, fillOpacity: op, interactive: false }).addTo(scLayer));
     const m = L.marker([c.lat, c.lng], { draggable: true, icon: L.divIcon({ className: '', iconSize: null, html: `<div class="scLbl" style="background:${col}">${i + 1} · ${c.mm} mm</div>` }) }).addTo(scLayer);
-    m.on('dragend', () => { const p = m.getLatLng(); c.lat = p.lat; c.lng = p.lng; scDraw(); });
+    m.on('dragend', () => { const p = m.getLatLng(); c.lat = p.lat; c.lng = p.lng; if (!c.zoneSet) c.zone = scZoneDefault(p.lat, p.lng); scDraw(); });
     const tr = document.createElement('tr');
     tr.innerHTML = `<td><span style="color:${col};font-weight:bold">● ${i + 1}</span></td><td class="num"><input type="number" min="1" max="800" step="10" value="${c.mm}" data-k="mm"></td>`
       + `<td class="num"><input type="number" min="1" max="80" step="1" value="${c.r_km}" data-k="r_km"></td><td class="num"><input type="number" min="0" max="24" step="1" value="${c.offset_h}" data-k="offset_h"></td>`
-      + `<td class="del" title="删除">✕</td>`;
+      + `<td><select data-z>${Object.entries(SC_ZONE).map(([k, v]) => `<option value="${k}"${(c.zone || 'II') === k ? ' selected' : ''}>${v}</option>`).join('')}</select></td><td class="del" title="删除">✕</td>`;
     tr.querySelectorAll('input').forEach(inp => inp.onchange = () => { c[inp.dataset.k] = +inp.value; scDraw(); });
+    tr.querySelector('[data-z]').onchange = e => { c.zone = e.target.value; c.zoneSet = true; scDraw(); };
     tr.querySelector('.del').onclick = () => { SC.centers.splice(i, 1); scDraw(); };
     tr.querySelector('td').onclick = () => map.setView([c.lat, c.lng], Math.max(map.getZoom(), 10));
     tb.appendChild(tr);
   });
-  scPeakW.style.display = scPat.value === 'chicago' ? '' : 'none'; scPeakV.textContent = `${Math.round(scPeak.value * 100)}%`;
+  const zoned = scPat.value === 'design' || scPat.value === 'chicago';
+  scPeakW.style.display = scPat.value === 'chicago' ? '' : 'none'; scPeak.disabled = scPeakAuto.checked; scPeakV.textContent = scPeakAuto.checked ? '' : `${Math.round(scPeak.value * 100)}%`;
+  scDesW.style.display = scPat.value === 'design' ? '' : 'none';
+  scBgMmW.style.display = scBg.value === 'uniform' ? '' : 'none'; scBgRunW.style.display = scBg.value === 'forecast' ? '' : 'none';
+  const zh = zoned ? SC.centers.map((c, i) => [i + 1, scDist(c.lat, c.lng)]).filter(([, d]) => /门头沟|房山|昌平|怀柔|海淀/.test(d)) : [];
+  scZoneHint.textContent = zh.length ? `${zh.map(([i, d]) => `雨团 ${i}（${d}）`).join('、')}：部分乡镇属 Ⅰ 区，请按规范 3.2.2 条确认` : '';
   scSave(); clearTimeout(SC.prevT); SC.prevT = setTimeout(scPreview, 300);
 }
-[scDur, scTail, scPat, scPeak, scNoise, scName].forEach(e => e.addEventListener(e === scName ? 'input' : 'change', scDraw));
+[scDur, scTail, scPat, scPeak, scPeakAuto, scNoise, scName, scMeth, scRp, scBg, scBgMm, scBgRun, scAnteMm, scAnteH].forEach(e => e.addEventListener(e === scName ? 'input' : 'change', scDraw));
 scPeak.addEventListener('input', () => { scPeakV.textContent = `${Math.round(scPeak.value * 100)}%`; });
+function scBgRuns(runs) {                                 // /api/ping 给出的最新起报
+  const cur = scBgRun.value || SC.bgRun;
+  scBgRun.innerHTML = (runs || []).map(r => `<option value="${esc(r.run)}">${esc(r.source)} ${esc(r.run)}（北京平均 ${r.beijing_mean_mm ?? '—'} mm）</option>`).join('');
+  if (cur && [...scBgRun.options].some(o => o.value === cur)) scBgRun.value = cur;
+}
 async function scPreview() {
   if (!SC.centers.length) { scPrev.innerHTML = '<div class="nc-note">还没有雨团</div>'; return; }
   if (!SC.online) { scPrev.innerHTML = '<div class="nc-note">连接本机服务后显示逐小时雨量</div>'; return; }
@@ -1703,10 +1733,14 @@ async function scPreview() {
   svg += '</svg>';
   const pk = j.series.map((s, i) => `${i + 1}：${Math.max(...s).toFixed(1)}`).join('，');
   scPrev.innerHTML = `<div style="font-size:13px;color:#888;margin-top:6px">雨团中心逐小时雨量 mm/h（最大小时雨强 ${pk}）</div>${svg}`
-    + `<div class="nc-note">从 ${esc(o.start_local)} 起模拟 ${n} h（降雨 ${o.rain_hours} h + 雨后 ${o.tail_hours} h${n > o.rain_hours + o.tail_hours ? '，含雨团错开时间' : ''}）；全市模型约需 ${Math.max(5, Math.round(n * 1.5))} 分钟以上</div>`;
+    + `<div class="nc-note">从 ${esc(o.start_local)} 起模拟 ${n} h（降雨 ${o.rain_hours} h + 雨后 ${o.tail_hours} h${n > o.rain_hours + o.tail_hours ? '，含雨团错开时间' : ''}）；运行时间随积水范围变化。9 h 情景实测：无背景或预报背景约 6 分钟，均匀背景 30 mm 约 9 分钟，前期雨 60 mm / 24 h 约 33 分钟；模型被占用时需排队</div>`
+    + (j.design && j.design.length ? `<div class="nc-note">${j.design.map((d, i) => `雨团 ${i + 1}：${esc(d.note)}`).join('<br>')}<br>以上只说明雨型形状来源，不是这场雨的频率判断。规范雨型面向城镇建设区，不适用于农田、林地、山地、荒地、鱼塘；点雨量未做面积折减。</div>` : '')
+    + (j.background_note ? `<div class="nc-note">${esc(j.background_note)}</div>` : '')
+    + (o.antecedent.mm > 0 ? `<div class="nc-note">情景前全域均匀先下 ${o.antecedent.mm} mm / ${o.antecedent.hours} h；最大水深和淹没范围含前期雨阶段</div>` : '');
 }
 scRun.onclick = async () => {
   if (!SC.centers.length) return alert('请先在地图上添加雨团');
+  if (scPat.value === 'design' && +scDur.value > 24) { scMsg.textContent = '规范雨型历时不超过 24 h，请缩短历时或换其他雨型'; scMsg.style.color = '#c0392b'; return; }
   if (!SC.online) return alert('未连接本机情景模拟服务，请先双击 HTML/viewer/启动情景模拟服务.bat');
   if (!scName.value.trim()) scName.value = SC.centers.map(c => `${c.mm} mm`).join('、');
   scRun.disabled = true; scMsg.textContent = '提交中…'; scMsg.style.color = '#888';
@@ -1716,7 +1750,7 @@ scRun.onclick = async () => {
 };
 async function scPing() {
   let ok = true, j = null;
-  try { await scApi('/api/ping'); j = await scApi('/api/scenarios'); } catch (e) { ok = false; }
+  try { const p = await scApi('/api/ping'); scBgRuns(p.runs); j = await scApi('/api/scenarios'); } catch (e) { ok = false; }
   const was = SC.online; SC.online = ok;
   scConn.innerHTML = ok ? '<span style="color:#1a9850">● 本机服务已连接</span>' : '<span style="color:#c0392b">● 未连接本机服务</span>';
   scOff.innerHTML = ok ? '' : '需要先双击 <b>HTML/viewer/启动情景模拟服务.bat</b>（会打开 http://127.0.0.1:8765/index.html）。服务只在这台电脑上运行，网页上传版不能提交。';
@@ -1744,17 +1778,20 @@ async function scShow(id) {
   afSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 function scInfo(r) {
-  const s = r.scenario, cm = s.center_mm_realized || [];
+  const s = r.scenario, cm = s.center_mm_realized || [], lead = s.model_lead_h ?? 1, an = s.antecedent || {}, di = s.design_info || [];
   return `<div class="afTest" style="display:block"><b>假设降雨情景，不是预报</b>：${esc(s.name)}</div>`
-    + `<div>${fmtT(s.start_local)} — ${fmtT(r.stop_local)}（模型提前 1 h 无雨起算）：降雨 ${s.rain_hours} h（${SC_PAT[s.pattern] || s.pattern}${s.pattern === 'chicago' ? `，峰值 ${Math.round(s.peak * 100)}%` : ''}）+ 雨后 ${s.tail_hours} h</div>`
-    + `<div>雨团：${s.centers.map((c, i) => `${i + 1}）${c.mm} mm / ${c.r_km} km${c.offset_h ? ` / 第 ${c.offset_h} h 开始` : ''}${cm[i] != null ? `（中心实际 ${cm[i]}）` : ''}`).join('；')}</div>`
+    + `<div>${fmtT(s.start_local)} — ${fmtT(r.stop_local)}（模型提前 ${lead} h ${an.mm > 0 ? `起算，含前期雨 ${an.mm} mm / ${an.hours} h` : '无雨起算'}）：降雨 ${s.rain_hours} h（${SC_PAT[s.pattern] || s.pattern}${s.pattern === 'chicago' ? `，峰值 ${s.peak == null ? '按分区' : Math.round(s.peak * 100) + '%'}` : ''}）+ 雨后 ${s.tail_hours} h</div>`
+    + `<div>雨团：${s.centers.map((c, i) => `${i + 1}）${c.mm} mm / ${c.r_km} km${c.zone ? ` / ${SC_ZONE[c.zone]} 区` : ''}${c.offset_h ? ` / 第 ${c.offset_h} h 开始` : ''}${cm[i] != null ? `（中心实际 ${cm[i]}）` : ''}`).join('；')}</div>`
+    + (di.length ? `<div>${di.map((d, i) => `雨团 ${i + 1}：${esc(d.note)}`).join('；')}</div><div class="nc-note">雨型只说明形状来源，不是这场雨的频率判断；规范雨型面向城镇建设区，点雨量未做面积折减</div>` : '')
+    + (s.background_note ? `<div>背景雨：${esc(s.background_note)}</div>` : '')
     + `<div><button class="btn" onclick="scLoad('${esc(r.id)}')">载入为草稿</button></div>`;
 }
 function scLoad(id) {
   const r = window.FLOOD_FC.runs.find(x => x.id === id); if (!r) return;
   const s = r.scenario;
   SC.centers = s.centers.map(c => ({ ...c }));
-  scDur.value = s.rain_hours; scTail.value = s.tail_hours; scPat.value = s.pattern; scPeak.value = s.peak; scNoise.value = String(s.noise); scName.value = s.name;
+  scDur.value = s.rain_hours; scTail.value = s.tail_hours; scPat.value = s.pattern; scPeakAuto.checked = s.peak == null; if (s.peak != null) scPeak.value = s.peak; scNoise.value = String(s.noise); scName.value = s.name;
+  scMeth.value = s.design_method || 'handbook'; scRp.value = String(s.rp ?? 'auto'); scSetExtra(s.background, s.antecedent);
   scDraw(); scSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 scDraw();
