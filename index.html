@@ -1497,6 +1497,7 @@ const AF_STALE_H = 7;                                   // 每 6 h 一次起报�
 const AF_HIDE_KEY = 'flood_viewer_hide_test_fc';
 async function afFetch() {
   const load = src => new Promise(ok => { const s = document.createElement('script'); s.src = src + '?t=' + Date.now(); s.onload = s.onerror = () => { s.remove(); ok(); }; document.head.appendChild(s); });
+  const shown = window.FLOOD_FC;                         // 读取期间继续显示旧数据：新预报还没并入情景，此时重绘会把选中的情景跳回 ECMWF
   await load('forecast/latest.js');
   try {                                                  // 发布版预报和图层一并加密，登录后在浏览器中解开
     if (ENCRYPTED && window.ENC_FORECAST) {
@@ -1504,9 +1505,11 @@ async function afFetch() {
       delete window.ENC_FORECAST;
     }
   } catch (e) { console.error('预报解密失败', e); }
+  const fresh = window.FLOOD_FC; window.FLOOD_FC = shown;
   window.FLOOD_FC_TEST = null;
   await load('forecast/test.js');
   if (!ENCRYPTED) { window.FLOOD_SC = null; await load('forecast/scenario.js'); }   // 降雨情景模拟结果（本机）
+  window.FLOOD_FC = fresh;
   afMerge();
   if (isLive()) afDraw();
 }
