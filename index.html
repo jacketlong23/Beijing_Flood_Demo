@@ -18,6 +18,8 @@
   #main { flex: 1; display: flex; min-height: 0; }
   #side { width: 360px; overflow-y: auto; border-right: 1px solid #ddd; background: #fafafa; }
   #map { flex: 1; }
+  #scOpen { display: none; position: absolute; right: 10px; bottom: 28px; z-index: 900; background: #fff; box-shadow: 0 1px 4px #0005; }
+  #side2 { width: 360px; flex: none; overflow-y: auto; border-left: 1px solid #ddd; background: #fafafa; display: none; }
   #top { display: flex; align-items: center; gap: 22px; height: 52px; padding: 0 14px; background: #fff; color: #222; border-bottom: 1px solid #d6d6d6; flex: none; }
   h1 { font-size: 20px; font-weight: bold; letter-spacing: 1px; margin: 0 8px 0 0; white-space: nowrap; color: #0d4a8f; }
   h1 small { font-weight: normal; color: #999; font-size: 12px; margin-left: 6px; }
@@ -70,6 +72,7 @@
   #scTab td, #scTab th { padding: 2px 4px; } #scTab .del { cursor: pointer; color: #c0392b; }
   #scList .it { display: flex; gap: 6px; align-items: center; padding: 3px 0; border-bottom: 1px solid #eee; font-size: 13px; }
   #scList .it b { flex: 1; font-weight: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .scIso { font: 11px sans-serif; color: #222; background: #fffd; padding: 0 3px; border-radius: 2px; white-space: nowrap; transform: translate(-50%, -50%); box-shadow: 0 0 2px #0006; }
   .scLbl { transform: translate(-50%, -50%); white-space: nowrap; font: bold 12px sans-serif; color: #fff; background: #1f5fbf; border: 2px solid #fff; border-radius: 10px; padding: 1px 6px; box-shadow: 0 0 3px rgba(0,0,0,.5); cursor: move; }
   .afBadge { padding: 6px 10px; border-radius: 4px; color: #fff; font-weight: bold; margin: 4px 0 8px; }
   #afCmp tbody tr { cursor: pointer; } #afCmp tbody tr.on { background: #dbe6f1; font-weight: bold; }
@@ -216,6 +219,23 @@
     <dt>综合风险（暂定）</dt><dd>仅对有调研信息的文物计算：50 m 内危险性（河道漫岸按 3 级）扣除本体高出周边与台基高度后，与调研脆弱性（材质、保存状况、病害、排水与防洪措施，或调研人初评）按矩阵组合为高 / 中 / 低；权重未标定</dd>
     <dt>局限</dt><dd>实况热启动建成前从干地起算，起报前已下的雨不计入，连续降雨时水深可能偏低；结果未校准，不代表真实水深</dd>
   </dl>
+  <div id="infoScW">
+  <h2 id="infoSc">降雨情景模拟怎么设</h2>
+  <dl class="help" style="margin:0">
+    <dt>拿不准时</dt><dd>雨团 100 mm、半径 15 km，降雨历时 6 h，北京规范雨型、手册法、重现期自动，雨后再算 12 h</dd>
+    <dt>总雨量</dt><dd>雨团中心在降雨历时内的总雨量。参考国标 GB/T 28592 的 24 h 雨量等级：暴雨 50–99.9 mm，大暴雨 100–249.9 mm，特大暴雨 ≥ 250 mm</dd>
+    <dt>半径</dt><dd>半径处雨量为中心的 10%，1.5 倍半径外不到 1%，圈外基本不下雨。经验上局地强对流约 5–10 km，区域性暴雨约 20–50 km（经验值，不是规范规定）。地图上的细线是等雨量线（mm）</dd>
+    <dt>开始 h</dt><dd>相对情景开始的小时数。几个雨团可以错开，模拟移动或先后出现的雨</dd>
+    <dt>分区 Ⅰ / Ⅱ</dt><dd>DB11/T 969—2016 第 3.2.2 条：Ⅰ 区是门头沟、房山、昌平、延庆、怀柔、海淀的部分山区乡镇，其余为 Ⅱ 区。延庆默认 Ⅰ，其余默认 Ⅱ；落在门头沟、房山、昌平、怀柔、海淀时会提示确认</dd>
+    <dt>雨型</dt><dd>决定总雨量怎样分到每个小时。<b>北京规范雨型</b>（默认，规范附录 B，面向城镇建设区，历时 ≤ 24 h）；<b>芝加哥雨型</b>（单峰，可调峰值位置，规范未规定这种雨型）；<b>均匀</b>（每小时一样，做对照）；<b>2023 / 2024 / 2025 年过程</b>（三场历史暴雨的全市面平均过程，偏平，适合长时间连续降雨）</dd>
+    <dt>方法</dt><dd><b>手册法</b>（默认，推荐）：规范附录 B.3 / B.4 水文手册法，第 3.5.3 条用于城镇涝水汇流和排涝河道计算，和本系统模拟积水的用途一致。<b>公式法</b>：附录 B.1 / B.2，由暴雨强度公式推得，第 3.5.2 条用于雨水管渠和泵站设计；Ⅰ 区时雨更集中，50 年一遇最大 1 h 约占 24 h 的 63%（手册法约 38%）</dd>
+    <dt>重现期</dt><dd>只决定雨型形状取规范表的哪一列，<b>不改变设定的总雨量</b>。“自动”取最大 n 小时雨量最接近设定值的一列。它不是对这场雨的频率判断，不能说成“这场雨是 50 年一遇”</dd>
+    <dt>雨后再算</dt><dd>雨停后继续模拟的时长，让水顺地形和河道流到下游。默认 12 h（降雨历时更长时取降雨历时），最多 24 h；越长运行越久</dd>
+    <dt>背景雨</dt><dd>圈外的雨。<b>无</b>：圈外基本无雨；<b>全域均匀</b>：全市统一加一个雨量；<b>最新预报</b>：用某次起报的雨量分布。总雨量取雨团与背景的较大值，雨团中心不变</dd>
+    <dt>情景前先下</dt><dd>情景开始前全域均匀下的雨，让土壤先变湿、河道先有水；会明显增加运行时间</dd>
+    <dt>空间扰动</dt><dd>给雨量加约 4 km 尺度的随机起伏，雨团中心仍等于设定值。“无”最光滑，便于对比</dd>
+  </dl>
+  </div>
   <h2>数据与局限</h2>
   <ul class="notes" id="notes"></ul>
   <div style="text-align:right;margin-top:10px"><button class="btn" id="infoClose">关闭</button></div>
@@ -273,26 +293,6 @@
         <a href="https://www.nmc.cn/publish/forecast/ABJ/beijing.html" target="_blank" rel="noopener">北京城市预报</a> ·
         <a href="https://www.nmc.cn/publish/alarm.html" target="_blank" rel="noopener">气象预警</a> ·
         <a href="http://www.12379.cn/" target="_blank" rel="noopener">国家预警信息发布中心</a></div>
-    </section>
-    <section data-tab="forecast" id="scSec" class="lv">
-      <h2>降雨情景模拟 <span id="scConn" style="font-weight:normal;font-size:13px"></span></h2>
-      <div id="scOff" class="nc-note"></div>
-      <div id="scBody">
-        <div class="nc-note" style="margin-top:0">在地图上点击添加雨团（可拖动），设定中心总雨量和半径（半径处约为中心的 10%）；按雨型分配到逐小时，再用洪涝模型（全市 100 m）计算。默认雨型取自北京市地方标准 DB11/T 969—2016，面向城镇建设区，点雨量未做面积折减。<b style="color:#c0392b">结果是假设情景，不是预报。</b></div>
-        <div class="row" style="margin-top:6px"><button class="btn" id="scPick">在地图上添加雨团</button><button class="btn" id="scClr">清空</button></div>
-        <table id="scTab" style="margin-top:4px"><thead><tr><th>雨团</th><th class="num">总雨量 mm</th><th class="num">半径 km</th><th class="num" title="相对情景开始时刻">开始 h</th><th title="DB11/T 969—2016 3.2.2 条">分区</th><th></th></tr></thead><tbody></tbody></table>
-        <div class="row" style="margin-top:6px">降雨历时 <input type="number" id="scDur" min="1" max="48" value="6"> h，雨后再算 <input type="number" id="scTail" min="0" max="24" value="6"> h</div>
-        <div class="row" style="margin-top:4px">雨型 <select id="scPat"></select><span id="scPeakW">峰值 <label title="Ⅰ 区 0.29、Ⅱ 区 0.71，取自规范 24 h 雨型；规范本身未规定芝加哥雨型"><input type="checkbox" id="scPeakAuto" checked>按分区</label> <input type="range" id="scPeak" min="0.1" max="0.9" step="0.05" value="0.7" style="width:80px"> <span id="scPeakV"></span></span></div>
-        <div class="row" id="scDesW" style="margin-top:4px">方法 <select id="scMeth"><option value="handbook">手册法</option><option value="formula">公式法</option></select> 重现期 <select id="scRp"><option value="auto">自动</option><option value="3">3 年</option><option value="5">5 年</option><option value="10">10 年</option><option value="20">20 年</option><option value="30">30 年</option><option value="50">50 年</option><option value="100">100 年</option></select></div>
-        <div class="row" style="margin-top:4px">雨团外背景雨 <select id="scBg"><option value="none">无</option><option value="uniform">全域均匀</option><option value="forecast">最新预报</option></select><span id="scBgMmW"> <input type="number" id="scBgMm" min="0.1" max="800" step="5" value="30"> mm</span><span id="scBgRunW"> <select id="scBgRun" style="max-width:190px"></select></span></div>
-        <div class="row" style="margin-top:4px">情景前先下 <input type="number" id="scAnteMm" min="0" max="800" step="10" value="0"> mm，历时 <input type="number" id="scAnteH" min="12" max="72" value="24"> h</div>
-        <div id="scZoneHint" class="nc-note" style="color:#b35c00"></div>
-        <div class="row" style="margin-top:4px">空间扰动 <select id="scNoise"><option value="0">无（光滑）</option><option value="0.15" selected>中（约 ±15%）</option><option value="0.3">强（约 ±30%）</option></select></div>
-        <div class="row" style="margin-top:4px">名称 <input id="scName" style="flex:1" maxlength="40" placeholder="如：房山西南 150 mm、东北 100 mm"></div>
-        <div id="scPrev"></div>
-        <div class="row" style="margin-top:6px"><button class="btn" id="scRun">提交模拟</button><span id="scMsg" style="font-size:13px"></span></div>
-        <div id="scList" style="margin-top:6px"></div>
-      </div>
     </section>
     <section data-tab="forecast" id="fcNone" class="hs">临近预报回放目前只有 2024 年 7 月 30 日一场，右上角选 2024 查看；选“实时”查看最新自动预报。</section>
     <section data-tab="flood heritage forecast" id="lySec" class="hs">
@@ -387,7 +387,33 @@
         <div class="nc-note">通过的条目进入左侧舆情列表（实时显示最近 7 天；选年份可与该场模拟对照）；审核记录只存本机浏览器，请定期备份</div>
       </div>
     </div></div>
-<div id="offline">底图需要联网；当前无法加载，结果图层与点位功能仍可使用</div></div>
+<div id="offline">底图需要联网；当前无法加载，结果图层与点位功能仍可使用</div>
+    <button class="btn" id="scOpen" title="展开右栏">‹ 降雨情景模拟</button></div>
+  <aside id="side2">
+    <section id="scSec">
+      <h2>降雨情景模拟 <span id="scConn" style="font-weight:normal;font-size:13px"></span><button class="btn" id="scFold" style="float:right;padding:0 8px;font-size:13px" title="收起右栏，地图变宽">收起 ›</button></h2>
+      <div id="scOff" class="nc-note"></div>
+      <div id="scBody">
+        <div class="nc-note" style="margin-top:0">在地图上点击添加雨团（可拖动），设定中心总雨量和半径（半径处约为中心的 10%，圈外基本无雨；地图细线为等雨量线 mm）；按雨型分配到逐小时，再用洪涝模型（全市 100 m）计算。默认雨型取自北京市地方标准 DB11/T 969—2016，面向城镇建设区，点雨量未做面积折减。<b style="color:#c0392b">结果是假设情景，不是预报。</b> <a href="#" id="scHelp" style="white-space:nowrap">怎么设置？</a></div>
+        <div class="row" style="margin-top:6px"><button class="btn" id="scPick">在地图上添加雨团</button><button class="btn" id="scClr">清空</button></div>
+        <table id="scTab" style="margin-top:4px"><thead><tr><th>雨团</th><th class="num">总雨量 mm</th><th class="num">半径 km</th><th class="num" title="相对情景开始时刻">开始 h</th><th title="DB11/T 969—2016 3.2.2 条">分区</th><th></th></tr></thead><tbody></tbody></table>
+        <div class="row" style="margin-top:6px">降雨历时 <input type="number" id="scDur" min="1" max="48" value="6"> h，雨后再算 <input type="number" id="scTail" min="0" max="24" value="12"> h</div>
+        <div class="row" style="margin-top:4px">雨型 <select id="scPat"></select><span id="scPeakW">峰值 <label title="Ⅰ 区 0.29、Ⅱ 区 0.71，取自规范 24 h 雨型；规范本身未规定芝加哥雨型"><input type="checkbox" id="scPeakAuto" checked>按分区</label> <input type="range" id="scPeak" min="0.1" max="0.9" step="0.05" value="0.7" style="width:80px"> <span id="scPeakV"></span></span></div>
+        <div id="scPatHint" class="nc-note" style="margin-top:2px"></div>
+        <div class="row" id="scDesW" style="margin-top:4px">方法 <select id="scMeth"><option value="handbook">手册法</option><option value="formula">公式法</option></select> 重现期 <select id="scRp"><option value="auto">自动</option><option value="3">3 年</option><option value="5">5 年</option><option value="10">10 年</option><option value="20">20 年</option><option value="30">30 年</option><option value="50">50 年</option><option value="100">100 年</option></select></div>
+        <div id="scDesHint" class="nc-note" style="margin-top:2px"></div>
+        <div class="row" style="margin-top:4px">雨团外背景雨 <select id="scBg"><option value="none">无</option><option value="uniform">全域均匀</option><option value="forecast">最新预报</option></select><span id="scBgMmW"> <input type="number" id="scBgMm" min="0.1" max="800" step="5" value="30"> mm</span><span id="scBgRunW"> <select id="scBgRun" style="max-width:190px"></select></span></div>
+        <div id="scBgHint" class="nc-note" style="margin-top:2px"></div>
+        <div class="row" style="margin-top:4px">情景前先下 <input type="number" id="scAnteMm" min="0" max="800" step="10" value="0"> mm，历时 <input type="number" id="scAnteH" min="12" max="72" value="24"> h</div>
+        <div id="scZoneHint" class="nc-note" style="color:#b35c00"></div>
+        <div class="row" style="margin-top:4px">空间扰动 <select id="scNoise"><option value="0">无（光滑）</option><option value="0.15" selected>中（约 ±15%）</option><option value="0.3">强（约 ±30%）</option></select></div>
+        <div class="row" style="margin-top:4px">名称 <input id="scName" style="flex:1" maxlength="40" placeholder="如：房山西南 150 mm、东北 100 mm"></div>
+        <div id="scPrev"></div>
+        <div class="row" style="margin-top:6px"><button class="btn" id="scRun">提交模拟</button><span id="scMsg" style="font-size:13px"></span></div>
+        <div id="scList" style="margin-top:6px"></div>
+      </div>
+    </section>
+  </aside>
   </div>
 </div>
 
@@ -1640,6 +1666,8 @@ scPat.innerHTML = ['design', 'chicago', 'uniform', '2023', '2024', '2025'].map(k
 [['scDur', 'rain_hours'], ['scTail', 'tail_hours'], ['scPat', 'pattern'], ['scPeak', 'peak'], ['scNoise', 'noise'], ['scName', 'name'], ['scMeth', 'design_method'], ['scRp', 'rp']]
   .forEach(([id, k]) => { if (SC.d[k] != null) document.getElementById(id).value = SC.d[k]; });
 scPeakAuto.checked = SC.d.peak == null;
+SC.tailSet = !!SC.d.tail_set;                             // 没手动改过“雨后再算”时随降雨历时自动取 max(12, 历时)
+if (!SC.tailSet) scTail.value = Math.min(24, Math.max(12, +scDur.value || 0));
 scSetExtra(SC.d.background, SC.d.antecedent);
 function scSetExtra(b, a) {                               // 草稿恢复、载入情景：背景雨与前期雨
   b = b || {}; a = a || {};
@@ -1656,7 +1684,7 @@ function scGet() {
 }
 function scDist(lat, lng) { return (D && D.boundary && districtOf(lat, lng)) || ''; }
 function scZoneDefault(lat, lng) { return /延庆/.test(scDist(lat, lng)) ? 'I' : 'II'; }   // 无乡镇边界，不做精确判定：延庆默认 Ⅰ，其余默认 Ⅱ
-function scSave() { try { localStorage.setItem(SC_KEY, JSON.stringify(scGet())); } catch (e) { } }
+function scSave() { try { localStorage.setItem(SC_KEY, JSON.stringify({ ...scGet(), tail_set: !!SC.tailSet })); } catch (e) { } }
 async function scApi(path, body) {
   const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000);
   try {
@@ -1667,7 +1695,9 @@ async function scApi(path, body) {
 function scSync(lv) {                                     // applyCtx 调用：只在“洪水预报 · 实时”显示与轮询
   if (!SC) return;
   const on = !ENCRYPTED && tab === 'forecast' && lv;
-  scSec.style.display = ENCRYPTED ? 'none' : '';
+  scSec.style.display = ENCRYPTED ? 'none' : ''; infoScW.style.display = ENCRYPTED ? 'none' : '';
+  const show = on && !SC.fold ? 'block' : 'none'; scOpen.style.display = on && SC.fold ? 'block' : 'none';
+  if (side2.style.display !== show) { side2.style.display = show; map.invalidateSize(); }
   on ? scLayer.addTo(map) : scLayer.remove();
   if (on && !SC.timer) { scPing(); SC.timer = setInterval(scPing, 10e3); }
   if (!on && SC.timer) { clearInterval(SC.timer); SC.timer = null; scSetPick(false); }
@@ -1677,6 +1707,9 @@ function scSetPick(on) {
   map.getContainer().classList.toggle('adding', on || adding);
 }
 scPick.onclick = () => scSetPick(!SC.pick);
+SC.fold = innerWidth < 1280;                              // 窄屏默认收起右栏，地图留够宽度
+scFold.onclick = () => { SC.fold = true; scSync(isLive()); };
+scOpen.onclick = () => { SC.fold = false; scSync(isLive()); };
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && SC.pick) scSetPick(false); });
 scClr.onclick = () => { if (SC.centers.length && confirm('清空全部雨团？')) { SC.centers = []; scDraw(); } };
 function scAdd(ll) {
@@ -1691,7 +1724,7 @@ function scDraw() {
     const col = SC_COLORS[i % SC_COLORS.length], R = c.r_km * 1000;
     [[1, .07, '4 4'], [.549, .1, null], [.354, .14, null]].forEach(([f, op, da]) =>                // 半径处 10%、0.55R 处 50%、0.35R 处 75%
       L.circle([c.lat, c.lng], { radius: R * f, color: col, weight: f === 1 ? 1.5 : 0, dashArray: da, fillColor: col, fillOpacity: op, interactive: false }).addTo(scLayer));
-    const m = L.marker([c.lat, c.lng], { draggable: true, icon: L.divIcon({ className: '', iconSize: null, html: `<div class="scLbl" style="background:${col}">${i + 1} · ${c.mm} mm</div>` }) }).addTo(scLayer);
+    const m = L.marker([c.lat, c.lng], { draggable: true, title: '虚线圈：雨量降到中心的 10%；可拖动', icon: L.divIcon({ className: '', iconSize: null, html: `<div class="scLbl" style="background:${col}">${i + 1} · ${c.mm} mm</div>` }) }).addTo(scLayer);
     m.on('dragend', () => { const p = m.getLatLng(); c.lat = p.lat; c.lng = p.lng; if (!c.zoneSet) c.zone = scZoneDefault(p.lat, p.lng); scDraw(); });
     const tr = document.createElement('tr');
     tr.innerHTML = `<td><span style="color:${col};font-weight:bold">● ${i + 1}</span></td><td class="num"><input type="number" min="1" max="800" step="10" value="${c.mm}" data-k="mm"></td>`
@@ -1708,11 +1741,59 @@ function scDraw() {
   scDesW.style.display = scPat.value === 'design' ? '' : 'none';
   scBgMmW.style.display = scBg.value === 'uniform' ? '' : 'none'; scBgRunW.style.display = scBg.value === 'forecast' ? '' : 'none';
   const zh = zoned ? SC.centers.map((c, i) => [i + 1, scDist(c.lat, c.lng)]).filter(([, d]) => /门头沟|房山|昌平|怀柔|海淀/.test(d)) : [];
+  scIso(); scHints();
   scZoneHint.textContent = zh.length ? `${zh.map(([i, d]) => `雨团 ${i}（${d}）`).join('、')}：部分乡镇属 Ⅰ 区，请按规范 3.2.2 条确认` : '';
   scSave(); clearTimeout(SC.prevT); SC.prevT = setTimeout(scPreview, 300);
 }
 [scDur, scTail, scPat, scPeak, scPeakAuto, scNoise, scName, scMeth, scRp, scBg, scBgMm, scBgRun, scAnteMm, scAnteH].forEach(e => e.addEventListener(e === scName ? 'input' : 'change', scDraw));
 scPeak.addEventListener('input', () => { scPeakV.textContent = `${Math.round(scPeak.value * 100)}%`; });
+scDur.addEventListener('change', () => { if (!SC.tailSet) { scTail.value = Math.min(24, Math.max(12, +scDur.value || 0)); scDraw(); } });
+scTail.addEventListener('change', () => { SC.tailSet = true; scSave(); });
+scHelp.onclick = e => { e.preventDefault(); infoWrap.style.display = 'flex'; infoSc.scrollIntoView(); };
+const SC_PAT_HINT = { design: '规范附录 B 的设计雨型，面向城镇建设区，历时不超过 24 h。', chicago: '单峰雨型，可调峰值位置；规范没有规定这种雨型。',
+  uniform: '每小时雨量相同，适合做对照。', 2023: '2023 年 7 月暴雨的全市面平均过程，偏平，适合长时间连续降雨。',
+  2024: '2024 年 7 月暴雨的全市面平均过程，偏平，适合长时间连续降雨。', 2025: '2025 年 7 月暴雨的全市面平均过程，偏平，适合长时间连续降雨。' };
+function scHints() {                                      // 选项下方的一句说明，随选项变化
+  scPatHint.textContent = SC_PAT_HINT[scPat.value] || '';
+  scDesHint.textContent = (scMeth.value === 'formula' ? '公式法：规范 3.5.2 条，用于雨水管渠和泵站设计；Ⅰ 区雨量更集中在最大 1 h。' : '手册法：规范 3.5.3 条，用于城镇涝水和排涝河道计算，推荐。')
+    + (scRp.value === 'auto' ? '重现期“自动”：取最大 n 小时雨量最接近设定值的形状，不改变总雨量。' : `按 ${scRp.value} 年一遇的形状分配，总雨量仍按设定值。`);
+  scBgHint.textContent = scBg.value === 'none' ? '圈外基本无雨（1.5 倍半径外不到中心的 1%）。要模拟大范围降雨，请选“全域均匀”或“最新预报”。'
+    : scBg.value === 'forecast' ? '地图上的等雨量线未计入预报背景雨。' : '';
+}
+function scIso() {                                        // 等雨量线：与 scenario_rain.py 相同的融合公式 ΣP·g / max(1, Σg)，不含空间扰动与预报背景
+  if (!SC.centers.length) return;
+  const c0 = SC.centers[0], kx = 111320 * Math.cos(c0.lat * Math.PI / 180), ky = 110540, LN10 = Math.log(10);
+  const cs = SC.centers.map(c => ({ x: (c.lng - c0.lng) * kx, y: (c.lat - c0.lat) * ky, R: c.r_km * 1000, P: +c.mm }));
+  const bg = scBg.value === 'uniform' ? +scBgMm.value || 0 : 0;
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  cs.forEach(c => { x0 = Math.min(x0, c.x - 2.2 * c.R); x1 = Math.max(x1, c.x + 2.2 * c.R); y0 = Math.min(y0, c.y - 2.2 * c.R); y1 = Math.max(y1, c.y + 2.2 * c.R); });
+  const N = 160, dx = (x1 - x0) / N, dy = (y1 - y0) / N, v = new Float64Array((N + 1) * (N + 1));
+  for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) {
+    const x = x0 + i * dx, y = y0 + j * dy; let G = 0, S = 0;
+    cs.forEach(c => { const g = Math.exp(-LN10 * ((x - c.x) ** 2 + (y - c.y) ** 2) / (c.R * c.R)); G += g; S += c.P * g; });
+    v[j * (N + 1) + i] = Math.max(S / Math.max(1, G), bg);
+  }
+  const top = Math.max(...cs.map(c => c.P)), ll = (x, y) => [c0.lat + (y0 + y * dy) / ky, c0.lng + (x0 + x * dx) / kx];
+  const CASES = [[], [[3, 0]], [[0, 1]], [[3, 1]], [[1, 2]], [[3, 2], [0, 1]], [[0, 2]], [[3, 2]], [[2, 3]], [[0, 2]], [[0, 3], [1, 2]], [[1, 2]], [[1, 3]], [[0, 1]], [[0, 3]], []];
+  const k0 = cs.findIndex(c => c.P === top), ci = Math.round((cs[k0].x - x0) / dx), cj = Math.round((cs[k0].y - y0) / dy);
+  [10, 25, 50, 100, 250].filter(l => l < top * 0.98 && l > bg).forEach(l => {
+    const segs = [];
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+      const a = v[j * (N + 1) + i], b = v[j * (N + 1) + i + 1], c = v[(j + 1) * (N + 1) + i + 1], d = v[(j + 1) * (N + 1) + i];
+      const k = (a > l) | (b > l) << 1 | (c > l) << 2 | (d > l) << 3;
+      if (!CASES[k].length) continue;
+      const e = n => n === 0 ? [i + (l - a) / (b - a), j] : n === 1 ? [i + 1, j + (l - b) / (c - b)] : n === 2 ? [i + (l - d) / (c - d), j + 1] : [i, j + (l - a) / (d - a)];
+      CASES[k].forEach(([p, q]) => segs.push([e(p), e(q)].map(([x, y]) => ll(x, y))));
+    }
+    if (!segs.length) return;
+    L.polyline(segs, { color: '#000', weight: 3.5, opacity: .35, interactive: false }).addTo(scLayer);   // 深色描边 + 白线，卫星图和浅色底图上都看得清
+    L.polyline(segs, { color: '#fff', weight: 1.5, opacity: .95, interactive: false }).addTo(scLayer);
+    let ly = null;                                        // 标签：从最强雨团中心向正南（避开雨团名称），放在该雨量线穿过处，各级依次排开
+    for (let j = cj; j > 0; j--) { const a = v[j * (N + 1) + ci], b = v[(j - 1) * (N + 1) + ci]; if (a > l && b <= l) { ly = j - (l - a) / (b - a); break; } }
+    if (ly == null) return;
+    L.marker(ll(ci, ly), { interactive: false, icon: L.divIcon({ className: '', iconSize: null, html: `<div class="scIso">${l} mm</div>` }) }).addTo(scLayer);
+  });
+}
 function scBgRuns(runs) {                                 // /api/ping 给出的最新起报
   const cur = scBgRun.value || SC.bgRun;
   scBgRun.innerHTML = (runs || []).map(r => `<option value="${esc(r.run)}">${esc(r.source)} ${esc(r.run)}（北京平均 ${r.beijing_mean_mm ?? '—'} mm）</option>`).join('');
