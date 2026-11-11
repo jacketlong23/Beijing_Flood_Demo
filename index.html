@@ -1817,7 +1817,7 @@ async function scPreview() {
   svg += '</svg>';
   const pk = j.series.map((s, i) => `${i + 1}：${Math.max(...s).toFixed(1)}`).join('，');
   scPrev.innerHTML = `<div style="font-size:13px;color:#888;margin-top:6px">雨团中心逐小时雨量 mm/h（最大小时雨强 ${pk}）</div>${svg}`
-    + `<div class="nc-note">从 ${esc(o.start_local)} 起模拟 ${n} h（降雨 ${o.rain_hours} h + 雨后 ${o.tail_hours} h${n > o.rain_hours + o.tail_hours ? '，含雨团错开时间' : ''}）；运行时间随积水范围变化。9 h 情景实测：无背景或预报背景约 6 分钟，均匀背景 30 mm 约 9 分钟，前期雨 60 mm / 24 h 约 33 分钟；模型被占用时需排队</div>`
+    + `<div class="nc-note">从 ${esc(o.start_local)} 起模拟 ${n} h（降雨 ${o.rain_hours} h + 雨后 ${o.tail_hours} h${n > o.rain_hours + o.tail_hours ? '，含雨团错开时间' : ''}）；运行时间随积水范围变化。已改用 GPU 计算：9 h 无背景情景实测约 3 分钟（模型约 1 分钟，其余为准备和导出）；有背景雨或前期雨时更久；同时提交多个情景时需排队</div>`
     + (j.design && j.design.length ? `<div class="nc-note">${j.design.map((d, i) => `雨团 ${i + 1}：${esc(d.note)}`).join('<br>')}<br>以上只说明雨型形状来源，不是这场雨的频率判断。规范雨型面向城镇建设区，不适用于农田、林地、山地、荒地、鱼塘；点雨量未做面积折减。</div>` : '')
     + (j.background_note ? `<div class="nc-note">${esc(j.background_note)}</div>` : '')
     + (o.antecedent.mm > 0 ? `<div class="nc-note">情景前全域均匀先下 ${o.antecedent.mm} mm / ${o.antecedent.hours} h；最大水深和淹没范围含前期雨阶段</div>` : '');
