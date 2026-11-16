@@ -231,7 +231,7 @@
   <details id="rpBox" style="margin-top:10px"><summary style="cursor:pointer;font-weight:bold">运行参数设置（SFINCS 性能）</summary>
   <div class="nc-note">影响计算速度与电脑占用，下一次运行起生效（正在运行的不变）。所用参数记入每次结果的 input_manifest.json。需本机服务在运行。</div>
   <table style="font-size:13px;margin-top:4px;width:100%">
-   <tr><td style="white-space:nowrap">计算网格</td><td><select id="rpGrid"><option value="g200">快速 200 m（默认；23·7 60 h：模型 16 → 2 min）</option><option value="hd100">精细 100 m</option></select> <span class="nc-note" style="display:inline">只影响情景 / 实况模拟；200 m 浅积水（≥0.15 m）面积比 100 m 少约 1 成、城区街巷积水偏少，深水接近，见 Porcessing/Test25 对比</span></td></tr>
+   <tr><td style="white-space:nowrap">计算网格</td><td><select id="rpGrid"><option value="hd100">100 m</option><option value="g200">200 m</option><option value="g400">400 m</option></select></td></tr>
    <tr><td style="white-space:nowrap">计算方式</td><td><select id="rpEngine"><option value="auto">自动（有显卡用 GPU）</option><option value="gpu">优先 GPU</option><option value="cpu">只用 CPU</option></select></td></tr>
    <tr><td>CPU 线程数</td><td><input type="number" id="rpThreads" min="0" max="256" style="width:70px"> <span class="nc-note" style="display:inline">0 = 全部核心</span></td></tr>
    <tr><td>CPU 优先级</td><td><select id="rpPrio"><option value="Normal">正常</option><option value="BelowNormal">低于正常（计算时电脑更流畅）</option><option value="Idle">空闲时</option></select></td></tr>
