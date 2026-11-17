@@ -97,6 +97,17 @@
   #afCmp tbody tr { cursor: pointer; } #afCmp tbody tr.on { background: #dbe6f1; font-weight: bold; }
   .evName { font-weight: bold; color: #1f3b57; }
   .tabnote { font-size: 13px; color: #888; margin: -2px 0 6px; }
+  #cwBox { clear: both; margin-top: 6px; border: 1px solid #f0b37e; border-radius: 4px; padding: 6px; background: #fffaf3; }
+  #cwBox .cwHead { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+  #cwBox .cwHead b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } #cwBox .cwHead a { font-size: 13px; white-space: nowrap; } #cwBox .cwHead .btn { margin-left: auto; padding: 1px 10px; font-size: 13px; white-space: nowrap; flex: none; }
+  #cwOut { margin-top: 4px; max-height: 176px; overflow-y: auto; border: 1px solid #eadfce; border-radius: 3px; background: #fff; font-size: 13px; }
+  #cwOut .cwI { display: flex; gap: 6px; align-items: baseline; padding: 4px 6px; border-bottom: 1px solid #f2ece3; cursor: pointer; }
+  #cwOut .cwI:hover { background: #fff1e0; } #cwOut .cwI.sel { background: #ffe3c2; }
+  #cwOut .cwI i { flex: 0 0 9px; height: 9px; border-radius: 50%; align-self: center; }
+  #cwOut .cwI span { flex: 1; } #cwOut .cwI em { font-style: normal; color: #888; font-size: 12px; white-space: nowrap; }
+  #cwOut .cwI.off { color: #999; } #cwOut .cwI.rain span { font-weight: bold; }
+  #cwOut .cwEnd { padding: 4px 6px; color: #888; font-size: 12px; text-align: center; }
+  #cwSel { font-size: 13px; margin-top: 4px; } #cwSel:empty { display: none; }
   #tlBar, #ftBar { display: flex; align-items: center; gap: 6px; }
   #ftPlay { white-space: nowrap; min-width: 5.5em; }
   #ftSpeed { width: auto; }
@@ -240,7 +251,7 @@
    <tr><td>最长排队等待</td><td><input type="number" id="rpWait" min="1" max="48" style="width:70px"> h <span class="nc-note" style="display:inline">CPU 运行前等其他模型结束</span></td></tr>
   </table>
   <div class="row" style="gap:6px;margin-top:4px"><button class="btn" id="rpSave">保存运行参数</button><button class="btn" id="rpReset">恢复默认</button><span id="rpMsg" class="nc-note"></span></div>
-  <div class="nc-note">CPU 运行（自动预报、无显卡时的情景）为 Windows sfincs.exe，线程数与优先级只对它生效；GPU 版不受线程数影响。</div>
+  <div class="nc-note" id="rpNote">线程数与优先级只对 CPU 版 SFINCS 生效（自动预报、无显卡时的情景）；GPU 版不受线程数影响。</div>
   </details>
   <div style="text-align:right;margin-top:12px"><button class="btn" id="setClose">关闭</button></div>
 </div></div>
@@ -375,7 +386,7 @@
     <section data-tab="forecast" id="fcLinks" class="lv">
       <details id="fcDet"><summary style="cursor:pointer">中国气象局 GRAPES 对照 <span id="fcWhere" style="color:#888;font-size:13px"></span></summary>
       <div id="fcBox"></div>
-      <div class="nc-note">经 Open-Meteo 获取，需联网；每区取一个代表点</div>
+      <div class="nc-note pro">经 Open-Meteo 获取，需联网；每区取一个代表点</div>
       </details>
     </section>
     <section data-tab="heritage">
@@ -440,7 +451,13 @@
       <h2>降雨情景模拟 <span id="scConn" style="font-weight:normal;font-size:13px"></span><button class="btn" id="scFold" style="float:right;padding:0 8px;font-size:13px" title="收起右栏，地图变宽">收起 ›</button><button class="btn" id="scHide" style="float:right;padding:0 8px;font-size:13px;margin-right:4px" title="一键隐藏 / 显示地图上的雨团、等值线和降雨量预览（不删除雨团）">隐藏雨团</button></h2>
       <div id="scOff" class="nc-note"></div>
       <div id="scBody">
-        <div class="nc-note keep manNote" style="margin-top:0">在地图上点击添加雨团（可拖动），设定总雨量、半径和历时后运行洪涝模型。<b style="color:#c0392b" id="scWarn">结果是假设情景，不是预报。</b> <a href="#" id="scHelp" style="white-space:nowrap">怎么设置？</a></div>
+        <div id="cwBox" style="margin-top:0">
+          <div class="cwHead"><b>北京市气象局 · 最新预警</b><a href="https://bj.cma.gov.cn/qxfw/yjxx/bjs/" target="_blank" rel="noopener">官网</a><button class="btn" id="cwList" title="重新读取北京市气象局预警信息（北京市）">刷新</button></div>
+          <div id="cwOut"></div>
+          <div class="row" style="margin-top:4px;gap:4px"><input id="cwUrl" style="flex:1;min-width:100px" placeholder="更早的预警：粘贴详情页链接或编号"><button class="btn" id="cwGet">读取</button></div>
+          <div id="cwSel"></div>
+        </div>
+        <div class="nc-note keep manNote" style="margin-top:6px">在地图上点击添加雨团（可拖动），设定总雨量、半径和历时后运行洪涝模型。<b style="color:#c0392b" id="scWarn">结果是假设情景，不是预报。</b> <a href="#" id="scHelp" style="white-space:nowrap">怎么设置？</a></div>
         <details class="nc-note" style="margin-top:4px"><summary>说明</summary>半径处约为中心的 10%，圈外基本无雨；地图细线为等雨量线 mm。按雨型分配到逐小时，再用洪涝模型（全市 100 m）计算。默认雨型取自北京市地方标准 DB11/T 969—2016，面向城镇建设区，点雨量未做面积折减。</details>
         <div style="margin-top:0;font-size:13px"><b style="color:#c0392b" id="scWarn2"></b></div>
         <div class="seg" id="scMode" style="margin-top:6px"><button data-m="manual" class="on">手动雨团（假设情景）</button><button data-m="synth">按气象预报合成</button><button data-m="obs">实况降雨</button></div>
@@ -454,10 +471,9 @@
             把新下载的 CLDAS-V2.0 HOR-PRE 逐小时文件（文件名含 HOR-PRE-YYYYMMDDHH）放入 <code>Porcessing/0Forecast/obs_inbox/</code>，刷新后上面会列出可用时段。缺任一小时不会填零，会提示缺哪些时次。读取设置见 <code>obs_config.json</code>。</details>
         </div>
         <div id="scSyn" style="display:none;margin-top:6px;border:1px solid #d6e2f0;border-radius:4px;padding:6px;background:#f7fafd">
-          <div style="font-size:13px;margin-top:0"><b>粘贴气象台预报原文 → 自动生成雨团 → 提交模拟</b></div>
-          <details id="syHow" style="font-size:12px;margin-top:2px;line-height:1.6"><summary style="cursor:pointer;color:#1f5fbf">去哪找预报原文？操作说明</summary>
+          <details id="syHow" class="pro" style="font-size:12px;margin-top:0;line-height:1.6"><summary style="cursor:pointer;color:#1f5fbf">去哪找预报原文？操作说明</summary>
             <div style="margin:2px 0 0 4px"><b>数据来源</b>：<a href="https://bj.cma.gov.cn/qxfw/yjxx/bjs/" target="_blank" rel="noopener">北京市气象局 · 预警信息（北京市）</a>。
-              上面“读取最近预警”列出该页最近发布的预警（暴雨类加粗），点标题即读入；更早的预警在该页点开后，把详情页链接（含 #id=）粘到链接框读取，或直接复制“发布内容”粘到下面的框。
+              本栏上方“最新预警”列出该页发布的预警（暴雨类加粗，向下滚动加载更早的），点标题即读入；也可把详情页链接（含 #id=）粘到链接框读取，或直接复制“发布内容”粘到下面的框。
             <div style="margin-top:2px"><b>预警等级</b>（北京市暴雨预警信号标准，满足任一条）：蓝色 1 h ≥ 30 或 6 h ≥ 50 mm；黄色 1 h ≥ 50、6 h ≥ 70 或 12 h ≥ 100 mm；橙色 1 h ≥ 70、6 h ≥ 100 或 12 h ≥ 150 mm；红色 1 h ≥ 100、6 h ≥ 150 或 12 h ≥ 200 mm。
               原文没写毫米数的区按预警等级的 6 h 标准取值，没写最大小时雨强时按 1 h 标准取值。</div>
             <b>操作</b>：
@@ -467,11 +483,9 @@
             <div>④ 点“提交模拟”，完成后在左侧“洪水预报”情景列表查看。</div>
             <div style="color:#888">只写“晴、多云、有雨”而没有毫米数的预报无法合成雨团。</div></div>
           </details>
-          <div class="row" style="margin-top:4px;gap:4px;flex-wrap:wrap"><button class="btn" id="cwList" title="从北京市气象局预警信息（北京市）读取最近发布的预警（含解除）">读取最近预警</button><input id="cwUrl" style="flex:1;min-width:120px" placeholder="或粘贴预警详情页链接（含 #id=）"><button class="btn" id="cwGet">读取</button></div>
-          <div id="cwOut" style="font-size:12px"></div>
           <div class="row pro" style="margin-top:4px">发布 <input id="syBy" style="flex:1" maxlength="60" placeholder="如：北京市气象台"> <input id="syAt" style="width:120px" maxlength="30" placeholder="2026-07-29 16:00" title="发布时间：原文只写“24日”“当前”“明天”时按它推算月份和日期"></div>
           <div class="row" style="margin-top:4px;gap:4px">预警级别 <select id="syWarn" title="气象台发布的暴雨预警级别；选“自动”时从原文识别"><option value="">自动（按原文识别）</option><option value="none">无预警</option><option value="蓝色" style="color:#1f6fd1">蓝色预警</option><option value="黄色" style="color:#c9a400">黄色预警</option><option value="橙色" style="color:#e67e22">橙色预警</option><option value="红色" style="color:#c0392b">红色预警</option></select><span id="syWarnStd" class="nc-note" style="margin:0"></span></div>
-          <div class="row" style="margin-top:4px;gap:4px">参考落区 <select id="syRefM" title="原文没写分区雨量时，自动调取数值预报定各区多少和先后（量级仍按原文）"><option value="ecmwf_ifs025">ECMWF（默认）</option><option value="cma_grapes_global">中国气象局 GRAPES</option><option value="gfs_seamless">GFS</option><option value="none">不参考（全市均匀）</option></select><span class="nc-note" style="margin:0">原文没写分区雨量时自动调取</span></div>
+          <div class="row" style="margin-top:4px;gap:4px">参考落区 <select id="syRefM" title="原文没写分区雨量时，自动调取数值预报定各区多少和先后（量级仍按原文）"><option value="ecmwf_ifs025">ECMWF（默认）</option><option value="cma_grapes_global">中国气象局 GRAPES</option><option value="gfs_seamless">GFS</option><option value="none">不参考（全市均匀）</option></select></div>
           <textarea id="syText" rows="4" style="width:100%;margin-top:4px;font:inherit;font-size:13px" maxlength="4000" placeholder="粘贴预报原文（会写进结果和报告），如：29日夜间至31日，全市平均降雨量60–100毫米，西南部150–200毫米，局地300毫米以上，最大小时雨强50–70毫米"></textarea>
           <div id="syParsed" style="font-size:12px;margin-top:2px"></div>
           <details id="syEdit" style="margin-top:4px"><summary style="cursor:pointer;color:#1f5fbf;font-size:13px">核对 / 修改识别结果</summary>
@@ -505,7 +519,7 @@
         </details>
         <div id="scPrev"></div>
         <div class="row" style="margin-top:6px"><button class="btn" id="scRun">提交模拟</button><span id="scMsg" style="font-size:13px"></span></div>
-        <label class="row" style="margin-top:4px;font-size:13px" title="默认雨停后再算 12 h，只能看到退水开头；勾选后雨停后算 48 h。模型没有排水管网和泵站，退水偏慢，48 h 后剩余积水偏多，只看趋势"><input type="checkbox" id="scLong"> 看完整退水（雨停后多算到 48 h，计算时间约多 50%，短时暴雨约 3 倍）</label>
+        <label class="row" style="margin-top:4px;font-size:13px" title="默认雨停后再算 12 h，只能看到退水开头；勾选后雨停后算 48 h。模型没有排水管网和泵站，退水偏慢，48 h 后剩余积水偏多，只看趋势"><input type="checkbox" id="scLong"> 看完整退水（雨停后算到 48 h，计算更久）</label>
         <div id="scList" style="margin-top:6px"></div>
       </div>
     </section>
@@ -1801,7 +1815,7 @@ function wetSvg(r) {                                       // 积水面积随时
   const ip = v.indexOf(Math.max(...v)), last = v[n - 1], drop = v[ip] > 0 ? Math.round((1 - last / v[ip]) * 100) : 0, after = n - 1 - ip;
   s += `<circle cx="${x(ip)}" cy="${y(v[ip])}" r="3" fill="#c0392b"/></svg>`;
   return s + `<div style="font-size:12px">峰值 <b>${v[ip].toFixed(0)}</b> km²（${tl(ip)}）；模拟结束 ${last.toFixed(0)} km²（${tl(n - 1)}），比峰值${drop >= 0 ? '少' : '多'} ${Math.abs(drop)}%</div>`
-    + `<div style="font-size:12px;color:#888">${after < 24 ? `峰值后只算了 ${after} h，退水还没结束；` : ''}模型没有排水管网和泵站，退水偏慢，积水持续时间只作参考；本曲线按模型网格统计（含河湖水面），与上面的积水面积口径略有不同</div>`;
+    + `<div class="nc-note" style="font-size:12px">${after < 24 ? `峰值后只算了 ${after} h，退水还没结束；` : ''}模型没有排水管网和泵站，退水偏慢，积水持续时间只作参考；本曲线按模型网格统计（含河湖水面），与上面的积水面积口径略有不同</div>`;
 }
 function afDraw0() {
   const F = window.FLOOD_FC, draw = AF.draw = (AF.draw || 0) + 1;
@@ -2355,7 +2369,7 @@ function scRainMap(rm) {                                   // 返回 HTML，并�
   const leg = ST.map(([t, c], i) => `<span style="display:inline-block;width:13px;height:9px;background:${c};vertical-align:middle"></span><span style="font-size:11px;margin:0 4px 0 1px">${i + 1 < ST.length ? `${t}–${ST[i + 1][0]}` : `≥${t}`}</span>`).join('') + '<span style="font-size:11px;color:#888"> mm</span>';
   return `<div id="scRm" style="margin-top:8px;border-top:1px solid #e3e8ef;padding-top:6px">`
     + `<div style="font-size:13px;display:flex;align-items:center;gap:6px"><b>降雨量预览</b><button class="btn${SC.rmShow !== false ? ' pri' : ''}" id="scRmShow" style="margin-left:auto;padding:2px 10px" title="在地图上显示 / 隐藏本预览；显示时左侧所选预报的雨量图暂时隐藏，避免两层叠在一起">${SC.rmShow !== false ? '✓ 地图上显示中' : '在地图上显示'}</button></div>`
-    + `<div class="nc-note keep" style="margin:0">提交前的快速估算：雨团在 1 km 网格上叠加出的累计雨量（只算雨量，不跑洪涝模型）；正式模拟在 100 / 200 m 网格上计算</div>`
+    + `<div class="nc-note" style="margin:0">提交前的快速估算：雨团在 1 km 网格上叠加出的累计雨量（只算雨量，不跑洪涝模型）</div>`
     + `<div style="font-size:13px;margin-top:2px">全市平均 <b>${rm.city_mean}</b> mm，最大 <b>${rm.max}</b> mm；≥250 mm ${rm.area_km2_ge['250']} km²，≥400 mm ${rm.area_km2_ge['400']} km²</div>`
     + `<div style="margin-top:3px;line-height:1.6">${leg}</div>`
     + `<details style="font-size:12px;margin-top:2px"${document.body.classList.contains('ui-simple') ? '' : ' open'}><summary style="cursor:pointer;color:#1f5fbf">各区面雨量</summary>`
@@ -2410,6 +2424,7 @@ async function scPing() {
   scOff.innerHTML = ok ? '' : '需要先双击 <b>HTML/viewer/启动情景模拟服务.bat</b>（会打开 http://127.0.0.1:8765/index.html）。服务只在这台电脑上运行，网页上传版不能提交。';
   scRun.disabled = !ok;
   if (ok !== was) scPreview();
+  if (ok && !was && window.CW && !CW.page && !CW.busy) cwLoad(true);              // 服务连上后自动列出最新预警
   if (!ok) return;
   SC.list = j.scenarios;
   let fin = null;
@@ -2789,9 +2804,10 @@ function syRef() {                                          // 原文日期的�
 syRefM.addEventListener('change', () => { if (syText.value.trim()) syText.dispatchEvent(new Event('input')); });
 syAt.addEventListener('change', () => { if (syText.value.trim()) syText.dispatchEvent(new Event('input')); });
 // ---------- 北京市气象局预警信息（北京市）：经本机服务读取（网页不能直接跨站），写入原文、发布单位与时间 ----------
+// 2026-11-16：预警列表移到“降雨情景模拟”顶部，服务连上后自动读取，可滚动，滚到底再读更早一页；点标题切到“按气象预报合成”并读入
 function cwFill(w) {
   const rain = /暴雨|雷|降雨|强降水/.test((w.signclass || '') + (w.title || '')), lift = /解除/.test(w.title || '');
-  cwOut.innerHTML = `<span style="color:${SY_WARN_COL[w.signrank + (/色$/.test(w.signrank) ? '' : '色')] || '#333'};font-weight:bold">${esc(w.title || '')}</span> ${esc(w.pubtime || '')}`
+  cwSel.innerHTML = `<span style="color:${SY_WARN_COL[w.signrank + (/色$/.test(w.signrank) ? '' : '色')] || '#333'};font-weight:bold">${esc(w.title || '')}</span> ${esc(w.pubtime || '')}`
     + (lift ? '<div style="color:#c0392b">这是解除预警，没有降雨预报内容，未写入原文</div>' : !rain ? `<div style="color:#c0392b">这是${esc(w.signclass || '')}预警，与降雨洪涝无关，未写入原文</div>` : '');
   if (lift || !rain) return;
   syBy.value = '北京市气象台'; syAt.value = String(w.pubtime || '').slice(0, 16);
@@ -2799,22 +2815,44 @@ function cwFill(w) {
   syText.value = `${w.title || ''}。${w.pubbody || ''}`.replace(/。。/g, '。');
   syText.dispatchEvent(new Event('input'));
 }
-cwList.onclick = async () => {
-  if (!SC.online) { cwOut.textContent = '未连接本机服务（双击“启动情景模拟服务.bat”）'; return; }
-  cwOut.textContent = '读取中…';
+var CW = { items: [], page: 0, more: true, busy: false, sel: null };
+function cwItem(x, i) {
+  const lv = (String(x.title || '').match(/(红|橙|黄|蓝)色/) || [])[0], off = /解除/.test(x.title || ''), rain = /暴雨|雷|降雨|强降水/.test(x.title || '') && !off;
+  return `<div class="cwI${off ? ' off' : ''}${rain ? ' rain' : ''}${CW.sel === x.id ? ' sel' : ''}" data-i="${i}" title="点击读入预警原文"><i style="background:${off ? '#ccc' : SY_WARN_COL[lv] || '#999'}"></i>`
+    + `<span>${esc(x.title || '')}</span><em>${esc(String(x.cttime || '').slice(5, 16))}</em></div>`;
+}
+function cwRender() {
+  cwOut.innerHTML = CW.items.map(cwItem).join('') + `<div class="cwEnd">${CW.busy ? '读取中…' : CW.more ? '向下滚动加载更早的预警' : CW.items.length ? '没有更早的预警' : '没有读到预警'}</div>`;
+}
+async function cwLoad(reset) {
+  if (CW.busy || (!reset && !CW.more)) return;
+  if (!SC.online) { cwOut.innerHTML = '<div class="cwEnd">未连接服务，无法读取预警</div>'; return; }
+  if (reset) { CW.items = []; CW.page = 0; CW.more = true; }
+  CW.busy = true; cwRender();
   try {
-    const j = await scApi('/api/cma_warn');
-    if (!j.items.length) { cwOut.innerHTML = '没有读到预警。历史预警请在 <a href="https://bj.cma.gov.cn/qxfw/yjxx/bjs/" target="_blank" rel="noopener">预警信息页</a> 打开，把链接粘到右边框读取。'; return; }
-    cwOut.innerHTML = j.items.slice(0, 12).map((x, i) => `<div><a href="#" data-i="${i}"${/暴雨|雷|降雨/.test(x.title) && !/解除/.test(x.title) ? ' style="font-weight:bold"' : ''}>${esc(x.title)}</a> <span style="color:#888">${esc(x.cttime || '')}</span></div>`).join('');
-    cwOut.querySelectorAll('a[data-i]').forEach(a => a.onclick = async ev => { ev.preventDefault(); cwUrl.value = j.items[+a.dataset.i].id; cwGet.click(); });
-  } catch (e) { cwOut.textContent = /未知接口|404/.test(e.message) ? '本机服务是旧版本：请重新双击“启动情景模拟服务.bat”' : e.message; }
-};
+    const j = await scApi('/api/cma_warn?page=' + (CW.page + 1));
+    const seen = new Set(CW.items.map(x => x.id)); CW.items.push(...j.items.filter(x => !seen.has(x.id)));
+    CW.page += 1; CW.more = j.more !== undefined ? !!j.more : false;
+  } catch (e) { CW.more = false; CW.err = /未知接口|404/.test(e.message) ? '服务是旧版本，请重启情景模拟服务' : e.message; }
+  CW.busy = false; cwRender();
+  if (CW.err) { cwOut.insertAdjacentHTML('beforeend', `<div class="cwEnd" style="color:#c0392b">${esc(CW.err)}</div>`); CW.err = null; }
+  if (CW.more && cwOut.offsetParent && CW.page < 3 && cwOut.scrollHeight <= cwOut.clientHeight + 4) cwLoad();     // 列表可见且一页填不满时继续读（最多 3 页）
+}
+cwOut.addEventListener('scroll', () => { if (cwOut.scrollTop + cwOut.clientHeight > cwOut.scrollHeight - 30) cwLoad(); });
+cwOut.addEventListener('click', ev => {
+  const d = ev.target.closest('.cwI'); if (!d) return;
+  const x = CW.items[+d.dataset.i]; CW.sel = x.id; cwRender();
+  if (SC.mode !== 'synth') { scSetMode('synth'); scSave(); }
+  cwUrl.value = x.id; cwGet.click();
+});
+cwList.onclick = () => cwLoad(true);
 cwGet.onclick = async () => {
   const id = (String(cwUrl.value).match(/id=([\w-]+)/) || [null, String(cwUrl.value).trim()])[1];
-  if (!id) return; if (!SC.online) { cwOut.textContent = '未连接本机服务'; return; }
-  cwOut.textContent = '读取中…';
+  if (!id) return; if (!SC.online) { cwSel.textContent = '未连接服务'; return; }
+  if (SC.mode !== 'synth') { scSetMode('synth'); scSave(); }
+  cwSel.textContent = '读取中…';
   try { cwFill((await scApi('/api/cma_warn?id=' + encodeURIComponent(id))).warning); }
-  catch (e) { cwOut.textContent = e.message; }
+  catch (e) { cwSel.textContent = e.message; }
 };
 scName.addEventListener('input', () => { SC.autoName = false; });
 syText.addEventListener('input', () => {
@@ -2848,7 +2886,10 @@ const RP_DEF = { grid: 'g200', engine: 'auto', cpu_threads: 0, cpu_priority: 'No
 function rpFill(p) { rpGrid.value = p.grid || 'g200'; rpEngine.value = p.engine; rpThreads.value = p.cpu_threads; rpPrio.value = p.cpu_priority; rpAlpha.value = p.alpha; rpHis.value = p.dthisout; rpWait.value = p.max_wait_h; }
 async function rpLoad() {
   const els = [rpGrid, rpEngine, rpThreads, rpPrio, rpAlpha, rpHis, rpWait, rpSave, rpReset];
-  try { const j = await scApi('/api/runparams'); rpFill(j.params); els.forEach(x => x.disabled = false); rpMsg.textContent = ''; }
+  try { const j = await scApi('/api/runparams'); rpFill(j.params); els.forEach(x => x.disabled = false); rpMsg.textContent = '';
+    // 2026-11-16：说明按服务所在平台显示（旧服务不返回 platform 时保留通用说明）
+    const exe = { windows: 'Windows 版 sfincs.exe', wsl: 'Windows 版 sfincs.exe', linux: 'Linux 版 sfincs_cpu（优先级用 nice 调整）' }[j.platform];
+    if (exe) rpNote.textContent = `CPU 运行（自动预报、无显卡时的情景）为 SFINCS ${exe}，线程数与优先级只对它生效；GPU 版不受线程数影响。`; }
   catch (e) { els.forEach(x => x.disabled = true); rpMsg.textContent = /未知接口|404/.test(e.message) ? '本机服务是旧版本：请重新双击“启动情景模拟服务.bat”' : '未连接本机服务，无法修改'; }
 }
 rpSave.onclick = async () => {
