@@ -491,7 +491,7 @@
           <details id="syEdit" style="margin-top:4px"><summary style="cursor:pointer;color:#1f5fbf;font-size:13px">核对 / 修改识别结果</summary>
           <div class="row" style="margin-top:4px">开始 <input type="datetime-local" id="syStart" step="3600" style="width:170px"> 降雨 <input type="number" id="syDur" min="1" max="72" value="24"> h</div>
           <div class="row pro" style="margin-top:4px">取值 <select id="syVal"><option value="mid" selected>中值（默认）</option><option value="upper">区间上限（偏保守）</option><option value="lower">下限</option></select></div>
-          <div class="row" style="margin-top:4px">全市平均 <input type="number" id="syBgLo" min="0" max="800" placeholder="下限">–<input type="number" id="syBgHi" min="0" max="800" placeholder="上限"> mm</div>
+          <div class="row" style="margin-top:4px">全市平均 <input type="number" id="syBgLo" min="0" max="1200" placeholder="下限">–<input type="number" id="syBgHi" min="0" max="1200" placeholder="上限"> mm</div>
           <div class="row pro" style="margin-top:4px">最大小时雨强 <input type="number" id="syMhLo" min="0" max="300" placeholder="下限">–<input type="number" id="syMhHi" min="0" max="300" placeholder="上限"> mm</div>
           <table id="syTab" style="margin-top:4px;font-size:13px"><thead><tr><th>区域</th><th class="num">雨量 mm（下限–上限）</th><th title="相对开始时刻">开始 h</th><th></th></tr></thead><tbody></tbody></table>
           <div class="row" style="margin-top:2px"><button class="btn" id="syAddA">+ 分区雨量</button><button class="btn pro" id="syAddL" title="局地极值：放在所选区质心，半径 8 km，生成后可在地图上拖动">+ 局地</button><button class="btn pro" id="syAddH" title="某区逐小时预报雨量（mm/h，逗号分隔）">+ 逐小时</button></div>
@@ -509,7 +509,7 @@
         <div id="scPatHint" class="nc-note" style="margin-top:2px"></div>
         <div class="row" id="scDesW" style="margin-top:4px">方法 <select id="scMeth"><option value="handbook">手册法</option><option value="formula">公式法</option></select> 重现期 <select id="scRp"><option value="auto">自动</option><option value="3">3 年</option><option value="5">5 年</option><option value="10">10 年</option><option value="20">20 年</option><option value="30">30 年</option><option value="50">50 年</option><option value="100">100 年</option></select></div>
         <div id="scDesHint" class="nc-note" style="margin-top:2px"></div>
-        <div class="row" style="margin-top:4px">雨团外背景雨 <select id="scBg"><option value="none">无</option><option value="uniform">全域均匀</option><option value="forecast">最新预报</option></select><span id="scBgMmW"> <input type="number" id="scBgMm" min="0.1" max="800" step="5" value="30"> mm</span><span id="scBgRunW"> <select id="scBgRun" style="max-width:190px"></select></span></div>
+        <div class="row" style="margin-top:4px">雨团外背景雨 <select id="scBg"><option value="none">无</option><option value="uniform">全域均匀</option><option value="forecast">最新预报</option></select><span id="scBgMmW"> <input type="number" id="scBgMm" min="0.1" max="1200" step="5" value="30"> mm</span><span id="scBgRunW"> <select id="scBgRun" style="max-width:190px"></select></span></div>
         <div id="scBgHint" class="nc-note" style="margin-top:2px"></div>
         <div class="row" style="margin-top:4px">情景前先下 <input type="number" id="scAnteMm" min="0" max="800" step="10" value="0"> mm，历时 <input type="number" id="scAnteH" min="12" max="72" value="24"> h</div>
         <div id="scZoneHint" class="nc-note pro" style="color:#b35c00"></div>
@@ -2230,11 +2230,14 @@ function scSave() {
     localStorage.setItem(SC_KEY, JSON.stringify({ ...scGet(), tail_set: !!SC.tailSet, mode: SC.mode || 'manual', sy, sy_rows: SC.syRows }));
   } catch (e) { }
 }
-async function scApi(path, body) {
-  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000);
+async function scApi(path, body, ms = 8000) {              // ms：等待上限；超时给中文提示（2026-11-18：原先统一 8 s，浏览器只报“signal is aborted without reason”）
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), ms);
   try {
     const r = await fetch(SC_API + path, body ? { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'text/plain' }, signal: ctl.signal } : { signal: ctl.signal });
     const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status); return j;
+  } catch (e) {
+    if (ctl.signal.aborted) throw new Error(`服务 ${Math.round(ms / 1000)} 秒内没有响应，请稍后重试`);
+    throw e;
   } finally { clearTimeout(t); }
 }
 function scSync(lv) {                                     // applyCtx 调用：只在“洪水预报 · 实时”显示与轮询
@@ -2277,7 +2280,7 @@ function scDraw() {
     m.on('dragend', () => { const p = m.getLatLng(); c.lat = p.lat; c.lng = p.lng; if (!c.zoneSet) c.zone = scZoneDefault(p.lat, p.lng); scDraw(); });
     const tr = document.createElement('tr');
     tr.innerHTML = `<td title="${esc(c.label || '')}"><span style="color:${col};font-weight:bold">● ${i + 1}</span>${c.label ? ` <span style="font-size:12px">${esc(c.label)}</span>` : ''}</td>`
-      + (c.hourly ? `<td class="num" title="逐小时预报过程，合计 ${c.mm} mm">${c.mm}<span style="font-size:11px;color:#888"> 逐时</span></td>` : `<td class="num"><input type="number" min="1" max="800" step="10" value="${c.mm}" data-k="mm"></td>`)
+      + (c.hourly ? `<td class="num" title="逐小时预报过程，合计 ${c.mm} mm">${c.mm}<span style="font-size:11px;color:#888"> 逐时</span></td>` : `<td class="num"><input type="number" min="1" max="1200" step="10" value="${c.mm}" data-k="mm"></td>`)
       + `<td class="num"><input type="number" min="1" max="80" step="1" value="${c.r_km}" data-k="r_km"></td><td class="num"><input type="number" min="0" max="24" step="1" value="${c.offset_h}" data-k="offset_h"></td>`
       + `<td><select data-z>${Object.entries(SC_ZONE).map(([k, v]) => `<option value="${k}"${(c.zone || 'II') === k ? ' selected' : ''}>${v}</option>`).join('')}</select></td><td class="del" title="删除">✕</td>`;
     tr.querySelectorAll('input').forEach(inp => inp.onchange = () => { c[inp.dataset.k] = +inp.value; if (SC.mode === 'synth') SC.synEdited = true; scDraw(); });
@@ -2520,7 +2523,7 @@ function syDraw() {
     const tag = { area: '', local: '局地 · ', hourly: '逐时 · ' }[r.t];
     tr.innerHTML = `<td>${tag}${sel}</td>` + (r.t === 'hourly'
       ? `<td colspan="2"><input data-k="h" style="width:150px" value="${esc(r.h || '')}" placeholder="逐小时 mm，如 0,2,5,12,30,45"></td>`
-      : `<td class="num"><input type="number" data-k="lo" min="0" max="800" value="${r.lo ?? ''}">–<input type="number" data-k="hi" min="0" max="800" value="${r.hi ?? ''}"></td><td><input type="number" data-k="off" min="0" max="24" value="${r.off || 0}" style="width:40px"></td>`)
+      : `<td class="num"><input type="number" data-k="lo" min="0" max="1200" value="${r.lo ?? ''}">–<input type="number" data-k="hi" min="0" max="1200" value="${r.hi ?? ''}"></td><td><input type="number" data-k="off" min="0" max="24" value="${r.off || 0}" style="width:40px"></td>`)
       + `<td class="del" title="删除">✕</td>`;
     tr.querySelectorAll('[data-k]').forEach(el => el.onchange = () => { const k = el.dataset.k; r[k] = k === 'd' || k === 'h' ? el.value : el.value === '' ? null : +el.value; scSave(); });
     tr.querySelector('.del').onclick = () => { SC.syRows.splice(i, 1); syDraw(); scSave(); };
@@ -2550,9 +2553,9 @@ function syBrief() {                                      // 表单 → 预报�
 }
 async function syRun(brief) {
   if (!SC.online) { syMsg.textContent = '未连接本机服务（双击“启动情景模拟服务.bat”）'; syMsg.style.color = '#c0392b'; return false; }
-  syMsg.textContent = '生成中…'; syMsg.style.color = '#888';
+  syMsg.textContent = '生成中…（需要时联网调取参考落区，长时段约 20 秒）'; syMsg.style.color = '#888';
   try {
-    const j = await scApi('/api/synth', brief), o = j.scenario;
+    const j = await scApi('/api/synth', brief, 60000), o = j.scenario;          // 联网取参考落区（后端限时 30 s）＋合成雨团，放宽到 60 s
     SC.centers = o.centers.map(c => ({ ...c, zoneSet: true })); SC.source = o.source; SC.start = brief.start_local ? o.start_local : null; SC.synEdited = false;
     scDur.value = o.rain_hours; scTail.value = o.tail_hours; SC.tailSet = true; scPat.value = o.pattern; SC.mainH = o.main_h || null; scPeakAuto.checked = o.peak == null; if (o.peak != null) scPeak.value = o.peak;
     scNoise.value = String(o.noise); SC.noiseKm = o.noise_km || 4; scTex.value = (o.texture && o.texture.event) || 'none'; scSetExtra(o.background, o.antecedent); if (!scName.value.trim()) scName.value = o.name;
@@ -2577,7 +2580,7 @@ const SY_GRADE = { 小雨: [0.1, 10], 中雨: [10, 25], 大雨: [25, 50], 暴雨
 const SY_WARN_STD = { 蓝色: { h1: 30, h6: 50, h12: null, city: [10, 25] }, 黄色: { h1: 50, h6: 70, h12: 100, city: [25, 50] },
   橙色: { h1: 70, h6: 100, h12: 150, city: [50, 100] }, 红色: { h1: 100, h6: 150, h12: 200, city: [100, 200] } };
 const SY_WARN_ORDER = ['蓝色', '黄色', '橙色', '红色'], SY_WARN_COL = { 蓝色: '#1f6fd1', 黄色: '#c9a400', 橙色: '#e67e22', 红色: '#c0392b' };
-const SY_LADDER = [10, 25, 30, 50, 70, 100, 150, 200, 250, 300, 350, 400, 500, 600, 800];
+const SY_LADDER = [10, 25, 30, 50, 70, 100, 150, 200, 250, 300, 350, 400, 500, 600, 800, 1000, 1200];   // 2026-11-18 加 1000、1200（雨团上限 1200 mm）
 const syNext = x => SY_LADDER.find(v => v > x) || Math.round(x * 1.4);   // “X 毫米以上”的上限：取下一档
 // 区名后接方位 / “大部”：是区内位置（如“怀柔南部”），不是全市方位词（“南部”= 房山、大兴）
 const SY_QUAL = '西南部|东南部|西北部|东北部|南部|北部|东部|西部|中部|大部';
