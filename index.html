@@ -123,6 +123,14 @@
   .setWrap { position: fixed; inset: 0; z-index: 3000; background: #0005; display: none; align-items: flex-start; justify-content: center; overflow-y: auto; }
   .setBox { background: #fff; margin: 60px 12px; padding: 16px 20px; border-radius: 6px; width: 480px; max-width: 100%; box-shadow: 0 4px 20px #0004; }
   .setBox h3 { font-size: 15px; margin: 14px 0 2px; }
+  #dmBox { width: 880px; } #dmBox h3 { border-bottom: 1px solid #ddd; padding-bottom: 2px; margin-top: 18px; }
+  .dmT, .dmKv { table-layout: fixed; font-size: 13px; } .dmT td, .dmT th, .dmKv td, .dmKv th { border: 1px solid #ddd; padding: 3px 6px; text-align: left; vertical-align: top; word-break: break-all; }
+  .dmT th, .dmKv th { background: #f3f5f8; font-weight: normal; color: #444; } .dmKv th { width: 15%; } .dmT td a { margin-right: 8px; white-space: nowrap; }
+  .dmT .cat td { background: #f3f5f8; color: #1f3b57; font-weight: bold; } .dmMute { color: #aaa; } .dmErr { color: #c0392b; }
+  .dmBar { height: 8px; border: 1px solid #bbb; background: #f3f3f3; margin: 4px 0 2px; } .dmBar i { display: block; height: 100%; width: 0; background: #1f5fbf; }
+  .dmBar.ok i { background: #1a9850; } .dmBar.bad i { background: #c0392b; }
+  .scBar { padding: 0 0 5px; border-bottom: 1px solid #eee; font-size: 12px; color: #888; } .scBar .dmBar { margin: 0 0 2px; } .scBar b { color: #1f5fbf; font-weight: normal; }
+  .syCmp { border-collapse: collapse; margin: 6px 0 2px; font-size: 12px; } .syCmp td, .syCmp th { border: 1px solid #e3e3e3; padding: 1px 8px; text-align: right; font-weight: normal; } .syCmp td:first-child, .syCmp th:first-child { text-align: left; } .syCmp tr:first-child th, .syCmp tr:last-child th { background: #f5f7fa; }
   #infoWrap { position: fixed; inset: 0; z-index: 3000; background: #0005; display: none; align-items: flex-start; justify-content: center; overflow-y: auto; }
   #infoBox { background: #fff; width: min(560px, 96vw); margin: 6vh 0; border-radius: 6px; box-shadow: 0 4px 24px #0006; padding: 6px 18px 14px; }
   #infoBox h2 { margin-top: 12px; }
@@ -255,6 +263,63 @@
   </details>
   <div style="text-align:right;margin-top:12px"><button class="btn" id="setClose">关闭</button></div>
 </div></div>
+<!-- 数据管理（2026-11-19，专业模式）：数据获取、上传数据、结果下载、运行进度；接口见 data_manager.py -->
+<div id="dmWrap" class="setWrap"><div class="setBox" id="dmBox">
+  <div class="row" style="align-items:baseline"><h2 style="margin:0;flex:1">数据管理</h2><span id="dmConn"></span><button class="btn" id="dmClose">关闭</button></div>
+
+  <h3>一、数据获取</h3>
+  <table class="dmKv">
+    <tr><th>数据源</th><td><select id="dmSrc" style="width:auto"></select> <span id="dmSrcNote" class="nc-note" style="display:inline"></span></td></tr>
+    <tr><th>时段</th><td><input type="datetime-local" id="dmStart" step="3600"> 起 <input type="number" id="dmHours" min="1" max="240" value="72" style="width:60px"> h</td></tr>
+    <tr><th>范围</th><td><select id="dmArea" style="width:auto"><option value="domain">模型计算域（含上游）</option><option value="beijing">北京市</option></select>
+      <button class="btn" id="dmGet" style="margin-left:8px">获取</button> <span id="dmGetMsg" class="nc-note" style="display:inline"></span></td></tr>
+  </table>
+  <table class="dmT" style="margin-top:6px"><thead><tr><th style="width:42%">已获取</th><th style="width:24%">状态</th><th>下载</th></tr></thead><tbody id="dmJobs"></tbody></table>
+
+  <h3>二、上传数据</h3>
+  <div class="row" style="gap:6px;flex-wrap:wrap">
+    <span>类型</span><select id="dmKind" style="width:auto"><option value="auto">自动识别</option></select>
+    <input type="file" id="dmFile" style="max-width:260px"><button class="btn" id="dmUp">上传</button>
+  </div>
+  <div class="dmBar" id="dmUpBar" hidden><i></i></div>
+  <div id="dmUpMsg" class="nc-note"></div>
+  <details id="dmHelp" style="margin-top:6px"><summary style="cursor:pointer;color:#1f5fbf;font-size:13px">示例文件与获取途径</summary>
+  <table class="dmT" style="margin-top:4px">
+    <thead><tr><th style="width:11%">类型</th><th style="width:15%">格式</th><th style="width:21%">示例</th><th style="width:22%">导入后</th><th>获取途径</th></tr></thead>
+    <tbody>
+      <tr><td>格点降水</td><td>逐时 NetCDF</td><td><a href="dm_examples/格点降水_示例6小时.nc" download>MSWEP 实测 6 h.nc</a></td><td>可提交模拟</td><td>上方“数据获取”；data.ecmwf.int、NOAA NOMADS</td></tr>
+      <tr><td>CLDAS 实况</td><td>HOR-PRE NetCDF，打成 zip</td><td><a href="dm_examples/CLDAS实况_示例6小时.zip" download>CLDAS 实测 6 h.zip</a></td><td>进入“实况”，可选该时段模拟</td><td>中国气象数据网 data.cma.cn（需申请）</td></tr>
+      <tr><td>CMA-MESO</td><td>逐时 NetCDF</td><td><a href="dm_examples/CMA-MESO_格式示意.nc" download>格式示意.nc</a></td><td>检查格式</td><td>气象部门业务对接（权限待开放）</td></tr>
+      <tr><td>站点雨量</td><td>CSV / Excel</td><td><a href="dm_examples/站点雨量_模板.csv" download>模板.csv</a><a href="dm_examples/站点雨量_示例24小时.csv" download>示例.csv</a></td><td>检查站数、时次、缺测</td>
+        <td>中国气象数据网（国家站）；北京市气象局、水文总站（需申请）</td></tr>
+      <tr><td>矢量</td><td>geojson / shp（zip）/ kml</td><td><a href="dm_examples/矢量_示例点位.geojson" download>示例点位.geojson</a></td><td>在地图上显示</td><td>天地图、OpenStreetMap</td></tr>
+      <tr><td>栅格</td><td>GeoTIFF</td><td><a href="dm_examples/栅格_示例累计雨量.tif" download>MSWEP 累计雨量.tif</a></td><td>在地图上显示</td><td>Copernicus GLO-30、GLC_FCS10</td></tr>
+      <tr><td>其他</td><td>任意</td><td><a href="dm_examples/其他_示例说明.txt" download>示例.txt</a></td><td>只存档</td><td>—</td></tr>
+    </tbody>
+  </table>
+  </details>
+  <table class="dmT" style="margin-top:6px"><thead><tr><th style="width:40%">最近上传</th><th style="width:18%">类型</th><th>结果</th></tr></thead><tbody id="dmUps"></tbody></table>
+
+  <h3>三、结果下载</h3>
+  <div class="row" style="gap:6px"><select id="dmRun" style="flex:1;min-width:0"></select><a class="btn" id="dmZip" href="#" style="text-decoration:none;white-space:nowrap">整场打包（含说明）</a></div>
+  <table class="dmT" style="margin-top:6px"><tbody id="dmFiles"></tbody></table>
+
+  <h3>四、运行进度</h3>
+  <table class="dmT"><thead><tr><th style="width:12%">类别</th><th style="width:30%">名称</th><th style="width:16%">阶段</th><th>进度</th></tr></thead><tbody id="dmProg"></tbody></table>
+</div></div>
+<div id="dmPopWrap" class="setWrap" style="z-index:3100"><div class="setBox" style="width:640px">
+  <div class="row" style="align-items:baseline"><h2 style="margin:0;flex:1" id="dmPopT">识别结果</h2><button class="btn" id="dmPopClose">关闭</button></div>
+  <div id="dmPopBody" style="margin-top:8px"></div>
+  <div id="dmSim" hidden>
+    <h3>提交模拟（可选）</h3>
+    <table class="dmKv">
+      <tr><th>可用时段</th><td id="dmSimSpan"></td></tr>
+      <tr><th>模拟时段</th><td><input type="datetime-local" id="dmSimStart" step="3600"> 起 <input type="number" id="dmSimH" min="1" max="240" style="width:60px"> h，雨后 <input type="number" id="dmSimTail" min="0" max="48" value="12" style="width:50px"> h</td></tr>
+      <tr><th>名称</th><td><input id="dmSimName" style="width:260px" maxlength="40"> <button class="btn" id="dmSimGo">提交模拟</button></td></tr>
+    </table>
+    <div id="dmSimMsg" class="nc-note"></div>
+  </div>
+</div></div>
 <div id="infoWrap"><div id="infoBox">
   <h2>图例说明</h2>
   <dl class="help" style="margin:0">
@@ -320,6 +385,7 @@
     <button data-tab="heritage"><i>⌂</i><span>文物洪涝风险</span></button>
     <button data-tab="opinion"><i>◎</i><span>舆情分析</span></button>
     <button data-tab="forecast"><i>☂</i><span>洪水预报</span></button>
+    <button id="navDm" class="pro" title="数据获取、上传、结果下载与运行进度（专业模式）"><i>▤</i><span>数据管理</span></button>
     <button id="navSet" style="margin-top:auto" title="天地图底图、自动预报数据源"><i>⚙</i><span>设置</span></button>
     <button id="navFold" title="收起 / 展开导航"><i>«</i><span>收起导航</span></button>
   </nav>
@@ -496,7 +562,7 @@
           <table id="syTab" style="margin-top:4px;font-size:13px"><thead><tr><th>区域</th><th class="num">雨量 mm（下限–上限）</th><th title="相对开始时刻">开始 h</th><th></th></tr></thead><tbody></tbody></table>
           <div class="row" style="margin-top:2px"><button class="btn" id="syAddA">+ 分区雨量</button><button class="btn pro" id="syAddL" title="局地极值：放在所选区质心，半径 8 km，生成后可在地图上拖动">+ 局地</button><button class="btn pro" id="syAddH" title="某区逐小时预报雨量（mm/h，逗号分隔）">+ 逐小时</button></div>
           <div class="row" style="margin-top:6px"><button class="btn" id="syGo">按修改重新生成</button><label class="btn pro" style="cursor:pointer">导入 JSON<input type="file" id="syFile" accept=".json,application/json" hidden></label></div>
-          <div id="syInfo" class="nc-note pro"></div>
+          <div id="syInfo" class="nc-note pro"></div><div id="syCmpBox"></div>
           </details>
           <div id="syMsg" style="font-size:13px;margin-top:4px"></div>
         </div>
@@ -1784,12 +1850,14 @@ const afSteps = (L2, unit) => L2.map(([lo, c], i) => `<div><i style="background:
 function afDraw() { afDraw0(); if (isLive() && D) renderPoints(); }
 // 雨源类型：实况数据模拟（历史场次 CLDAS 观测）/ 预报数据模拟（数值预报 ECMWF·GFS，或按气象预报信息合成的雨团）/ 假设情景（手动雨团）
 const scSynth = r => !!(r && r.scenario && r.scenario.source && r.scenario.source.kind === 'synth');
-const scObsR = r => !!(r && r.scenario && r.scenario.source && r.scenario.source.kind === 'obs');
+const scGridR = r => !!(r && r.scenario && r.scenario.source && r.scenario.source.kind === 'grid');   // 2026-11-19：数据管理导入的格点降水
+const scObsR = r => !!(r && r.scenario && r.scenario.source && ['obs', 'grid'].includes(r.scenario.source.kind));
 const scSrcTxt = r => { const o = (r.scenario && r.scenario.source) || {}; return [o.issued_by, o.issued_at].filter(Boolean).join(' '); };
-const scLbl = r => scObsR(r) ? '实况降雨模拟（CLDAS 逐小时观测，按需处理）' : scSynth(r) ? '预报信息合成雨源' + (scSrcTxt(r) ? `（来源：${esc(scSrcTxt(r))}）` : '') : '假设降雨情景，不是预报';
+const scLbl = r => scGridR(r) ? '导入格点降水模拟（' + esc((r.scenario.grid || {}).label || '') + '）' : scObsR(r) ? '实况降雨模拟（CLDAS 逐小时观测，按需处理）' : scSynth(r) ?'预报信息合成雨源' + (scSrcTxt(r) ? `（来源：${esc(scSrcTxt(r))}）` : '') : '假设降雨情景，不是预报';
 function rainKind(r) {
   if (!r) return { k: '实况', t: '实况数据模拟（CLDAS 观测降雨）' };
   if (!r.scenario) return { k: '预报', t: `预报数据模拟（数值预报 ${r.source}）` };
+  if (scGridR(r)) return { k: '导入', t: '导入格点降水模拟（' + ((r.scenario.grid || {}).label || '') + '）' };
   if (scObsR(r)) return { k: '实况', t: '实况数据模拟（CLDAS 观测降雨，按需处理）' };
   return scSynth(r) ? { k: '预报', t: '预报数据模拟（预报信息合成雨源）' } : { k: '假设', t: '假设情景模拟（手动雨团）' };
 }
@@ -2184,6 +2252,7 @@ const SC_API = location.protocol === 'file:' ? 'http://127.0.0.1:8765' : '';
 const SC_KEY = 'flood_viewer_scenario_draft_v1';
 const SC_STATE = { queued: ['排队', '#888'], preparing: ['生成降雨', '#1f5fbf'], waiting: ['等待其他模型', '#b35c00'], running: ['模型计算', '#1f5fbf'],
   exporting: ['导出', '#1f5fbf'], publishing: ['发布', '#1f5fbf'], done: ['完成', '#1a9850'], failed: ['失败', '#c0392b'], cancelled: ['已取消', '#888'] };
+const SC_STAGES = ['queued', 'preparing', 'waiting', 'running', 'exporting', 'publishing', 'done'];
 const SC_COLORS = ['#1f5fbf', '#c0392b', '#1a9850', '#8e44ad', '#d35400', '#16a085', '#2c3e50', '#b8860b', '#e84393', '#7f8c8d', '#2980b9', '#6d214f'];
 const SC_PAT = { design: '北京规范雨型', chicago: '芝加哥雨型', uniform: '均匀', 2023: '2023年7月过程（全市面平均，偏平）', 2024: '2024年7月过程（全市面平均，偏平）', 2025: '2025年7月过程（全市面平均，偏平）', main: '主降雨时段集中（时段内峰值约为平均 1.8 倍）' };
 const SC_ZONE = { I: 'Ⅰ', II: 'Ⅱ' };
@@ -2437,7 +2506,11 @@ async function scPing() {
     const [lb, col] = SC_STATE[s.state] || [s.state, '#888'];
     const ext = s.state === 'running' && s.model_started ? `，已 ${Math.max(0, (Date.now() - pTime(s.model_started)) / 60e3).toFixed(0)} min` : s.state === 'done' && s.run_minutes != null ? `，模型 ${s.run_minutes} min` : '';
     const btn = s.state === 'done' ? `<button class="btn" data-v="${s.id}">查看</button>` : s.state === 'queued' ? `<button class="btn" data-c="${s.id}">取消</button>` : '';
-    return `<div class="it" title="${esc(s.error || '')}"><b>${esc(s.name || s.id)}</b><span style="color:${col}">${lb}${ext}</span><button class="btn" data-n="${s.id}" title="修改名称">改名</button>${btn}</div>`;
+    const si = SC_STAGES.indexOf(s.state);                  // 2026-11-19：进行中的情景加进度条（模型计算阶段用 SFINCS 百分比）
+    const bar = si < 0 || s.state === 'done' ? '' : `<div class="scBar"><div class="dmBar"><i style="width:${s.state === 'running' && s.pct != null
+      ? Math.round((si + s.pct / 100) / (SC_STAGES.length - 1) * 100) : Math.round(si / (SC_STAGES.length - 1) * 100)}%"></i></div><span>${SC_STAGES.slice(0, -1).map((x, k) =>
+      k < si ? '✓' + SC_STATE[x][0] : k === si ? `<b>${SC_STATE[x][0]}${x === 'running' && s.pct != null ? ` ${s.pct}%${s.remain_s ? `，约剩 ${s.remain_s >= 90 ? Math.round(s.remain_s / 60) + ' 分钟' : Math.round(s.remain_s) + ' 秒'}` : ''}` : ''}</b>` : SC_STATE[x][0]).join(' → ')}</span></div>`;
+    return `<div class="it" title="${esc(s.error || '')}"><b>${esc(s.name || s.id)}</b><span style="color:${col}">${lb}${ext}</span><button class="btn" data-n="${s.id}" title="修改名称">改名</button>${btn}</div>${bar}`;
   }).join('') + (SC.list.length ? '<div class="nc-note">完成后自动显示在上方“最新自动预报”（来源“情景”，标红）</div>' : '');
   scList.querySelectorAll('[data-v]').forEach(b => b.onclick = () => scShow(b.dataset.v));
   scList.querySelectorAll('[data-n]').forEach(b => b.onclick = async () => {
@@ -2458,7 +2531,7 @@ async function scShow(id) {
 function scInfo(r) {
   if (scObsR(r)) { const s = r.scenario;
     return `<div class="afTest" style="display:block;background:#eef6ee;border-color:#1a9850;color:#1a6b3a"><b>${scLbl(r)}</b>：${esc(s.name)}</div>`
-      + `<div>${fmtT(s.start_local)} — ${fmtT(r.stop_local)}：实况 ${s.rain_hours} h + 雨后 ${s.tail_hours} h，CLDAS 文件 ${(s.obs_files || []).length} 个</div>`; }
+      + `<div>${fmtT(s.start_local)} — ${fmtT(r.stop_local)}：${scGridR(r) ? '降雨' : '实况'} ${s.rain_hours} h + 雨后 ${s.tail_hours} h${scGridR(r) ? '' : `，CLDAS 文件 ${(s.obs_files || []).length} 个`}</div>`; }
   const s = r.scenario, cm = s.center_mm_realized || [], lead = s.model_lead_h ?? 1, an = s.antecedent || {}, di = s.design_info || [];
   return `<div class="afTest" style="display:block"><b>${scLbl(r)}</b>：${esc(s.name)}</div>`
     + (scSynth(r) ? `<div class="scSrc"><b>预报来源：${esc([s.source.issued_by, s.source.issued_at].filter(Boolean).join(' ') || '未填')}</b>${s.source.warning ? `；<b style="color:${SY_WARN_COL[s.source.warning.level] || '#333'}">暴雨${esc(s.source.warning.level)}预警</b>` : ''}；取预报区间${{ lower: '下限', mid: '中值', upper: '上限' }[s.source.value] || '上限'}</div>`
@@ -2537,17 +2610,18 @@ function syBrief() {                                      // 表单 → 预报�
   const rg = (lo, hi) => lo == null && hi == null ? null : [lo ?? hi, hi ?? lo], num = e => e.value === '' ? null : +e.value;
   const b = { name: scName.value.trim() || '按预报信息合成', issued_by: syBy.value.trim(), issued_at: syAt.value.trim(), text: syText.value.trim(),
     start_local: syStart.value ? syStart.value.replace('T', ' ').slice(0, 16) : null, rain_hours: +syDur.value || 24, tail_hours: +scTail.value, value: syVal.value, areas: [], hourly: [] };
-  const bg = rg(num(syBgLo), num(syBgHi)); if (bg) b.background = { mm: bg };
+  const bg = rg(num(syBgLo), num(syBgHi)); if (bg) b.background = { mm: bg, ...(SC.syBgH6 && SC.syBgMost ? { h6: SC.syBgH6 } : {}) };
   if (SC.syMain && SC.syMain.start === (syStart.value || '').slice(0, 16) && +SC.syMain.dur === +syDur.value) b.main_h = SC.syMain.m;   // 改了开始或历时就不再用原文主时段
   const mh = rg(num(syMhLo), num(syMhHi)); if (mh) b.max_hourly_mm = mh;
   if (SC.syWarn) b.warning = { type: '暴雨', level: SC.syWarn };
   b.ref_model = syRefM.value;                                // 没写分区雨量时的参考落区（服务端自动调取）
+  if (SC.syBgMost && bg) b.ref_fill = true;                 // “大部分地区 X 毫米”：没点名的区按参考数值预报的相对多少分配
   if (SC.syPeak) b.local_peak = { mm: SC.syPeak };
   if (SC.syMove) b.move = SC.syMove;
   SC.syRows.forEach(r => {
     if (r.t === 'hourly') { const v = String(r.h || '').split(/[,，\s]+/).filter(x => x !== '').map(Number); if (v.length) b.hourly.push({ label: r.d, district: r.d, mm_h: v }); return; }
     const mm = rg(r.lo, r.hi); if (!mm) return;
-    b.areas.push({ label: r.t === 'local' ? r.d + '局地' : r.d, district: r.d, mm, offset_h: r.off || 0, ...(r.t === 'local' ? { local: true, r_km: 8 } : {}) });
+    b.areas.push({ label: r.t === 'local' ? r.d + '局地' : r.d, district: r.d, mm, offset_h: r.off || 0, ...(r.h6 && r.t !== 'local' ? { h6: r.h6 } : {}), ...(r.t === 'local' ? { local: true, r_km: 8 } : {}) });
   });
   return b;
 }
@@ -2560,6 +2634,9 @@ async function syRun(brief) {
     scDur.value = o.rain_hours; scTail.value = o.tail_hours; SC.tailSet = true; scPat.value = o.pattern; SC.mainH = o.main_h || null; scPeakAuto.checked = o.peak == null; if (o.peak != null) scPeak.value = o.peak;
     scNoise.value = String(o.noise); SC.noiseKm = o.noise_km || 4; scTex.value = (o.texture && o.texture.event) || 'none'; scSetExtra(o.background, o.antecedent); if (!scName.value.trim()) scName.value = o.name;
     syInfo.innerHTML = j.info.cells.map((c, i) => `${i + 1}）${esc(c.label)}：${c.mm} mm，半径 ${c.r_km} km（${esc(c.how)}）`).join('<br>') + '<br>' + j.info.notes.map(esc).join('；');
+    syCmpBox.innerHTML = (j.info.compare ? `<table class="syCmp"><tr><th>区</th><th>预警合成 mm</th><th>${/GFS/.test(j.info.compare.label) ? 'GFS' : /GRAPES/.test(j.info.compare.label) ? 'GRAPES' : 'ECMWF'} mm</th></tr>`
+        + j.info.compare.rows.map(r => `<tr><td>${esc(r[0].replace(/区$/, ''))}</td><td>${Math.round(r[1])}</td><td>${Math.round(r[2])}</td></tr>`).join('')
+        + `<tr><th>全市</th><th>${Math.round(j.info.compare.city[0])}</th><th>${Math.round(j.info.compare.city[1])}</th></tr></table>` : '');   // 2026-11-19：各区雨量对照（mm）
     syMsg.textContent = `已生成 ${o.centers.length} 个雨团（地图上可拖动），确认后点“提交模拟”`; syMsg.style.color = '#1a9850';
     scDraw(); if (SC.centers.length && map.getSize().x > 100) map.fitBounds(L.latLngBounds(SC.centers.map(c => [c.lat, c.lng])).pad(0.6));
     SC.synDirty = false; return true;
@@ -2572,8 +2649,8 @@ const SY_SHORT = SY_DIST.map(d => [d.replace(/区$/, ''), d]);
 const SY_REGION = { '城区': ['东城区', '西城区', '朝阳区', '海淀区', '丰台区', '石景山区'], '城六区': ['东城区', '西城区', '朝阳区', '海淀区', '丰台区', '石景山区'],
   '西南部': ['门头沟区', '房山区'], '东南部': ['通州区', '大兴区'], '西北部': ['延庆区', '昌平区'], '东北部': ['密云区', '平谷区'],
   '西部': ['门头沟区'], '南部': ['房山区', '大兴区'], '北部': ['延庆区', '怀柔区', '密云区'], '东部': ['通州区', '平谷区'], '经开区': ['大兴区'], '亦庄': ['大兴区'] };
-const SY_T0 = { 前半夜: 20, 上半夜: 20, 夜间: 20, 夜里: 20, 晚上: 20, 后半夜: 24, 下半夜: 24, 凌晨: 0, 早晨: 6, 清晨: 6, 上午: 8, 中午: 11, 午后: 13, 下午: 14, 傍晚: 17, 白天: 8 };
-const SY_T1 = { 前半夜: 24, 上半夜: 24, 夜间: 32, 夜里: 32, 晚上: 24, 后半夜: 29, 下半夜: 29, 凌晨: 6, 早晨: 8, 清晨: 8, 上午: 12, 中午: 14, 午后: 18, 下午: 18, 傍晚: 20, 白天: 20 };
+const SY_T0 = { 半夜: 22, 早上: 6, 夜晚: 20, 前半夜: 20, 上半夜: 20, 夜间: 20, 夜里: 20, 晚上: 20, 后半夜: 24, 下半夜: 24, 凌晨: 0, 早晨: 6, 清晨: 6, 上午: 8, 中午: 11, 午后: 13, 下午: 14, 傍晚: 17, 白天: 8 };
+const SY_T1 = { 半夜: 24, 早上: 9, 夜晚: 32, 前半夜: 24, 上半夜: 24, 夜间: 32, 夜里: 32, 晚上: 24, 后半夜: 29, 下半夜: 29, 凌晨: 6, 早晨: 8, 清晨: 8, 上午: 12, 中午: 14, 午后: 18, 下午: 18, 傍晚: 20, 白天: 20 };
 // 降雨等级（GB/T 28592 24 h 雨量）：原文只写等级、不写毫米数时按此换算，结果中注明
 const SY_GRADE = { 小雨: [0.1, 10], 中雨: [10, 25], 大雨: [25, 50], 暴雨: [50, 100], 大暴雨: [100, 250], 特大暴雨: [250, 400] };
 // 暴雨预警等级（北京市暴雨预警信号标准，满足任一条）：h1 / h6 / h12 为 1、6、12 h 雨量门槛 mm；city 为原文只有预警、没写全市雨量时的全市平均约定
@@ -2581,6 +2658,8 @@ const SY_WARN_STD = { 蓝色: { h1: 30, h6: 50, h12: null, city: [10, 25] }, 黄
   橙色: { h1: 70, h6: 100, h12: 150, city: [50, 100] }, 红色: { h1: 100, h6: 150, h12: 200, city: [100, 200] } };
 const SY_WARN_ORDER = ['蓝色', '黄色', '橙色', '红色'], SY_WARN_COL = { 蓝色: '#1f6fd1', 黄色: '#c9a400', 橙色: '#e67e22', 红色: '#c0392b' };
 const SY_LADDER = [10, 25, 30, 50, 70, 100, 150, 200, 250, 300, 350, 400, 500, 600, 800, 1000, 1200];   // 2026-11-18 加 1000、1200（雨团上限 1200 mm）
+const SY_H6 = /(?<!\d)6小时(?:累计)?(?:降雨量|降水量|雨量)(?:为|可达|达|有|在|约)?(\d+(?:\.\d+)?)(?:毫米)?(?:(?:至|到|-)(\d+(?:\.\d+)?))?毫米(以上)?/;   // 2026-11-19：6 小时雨量 → 雨量集中段
+const syH6 = s => { const m = String(s).match(SY_H6); return m ? (m[2] ? [+m[1], +m[2]] : m[3] ? [+m[1], syNext(+m[1])] : [+m[1], +m[1]]) : null; };
 const syNext = x => SY_LADDER.find(v => v > x) || Math.round(x * 1.4);   // “X 毫米以上”的上限：取下一档
 // 区名后接方位 / “大部”：是区内位置（如“怀柔南部”），不是全市方位词（“南部”= 房山、大兴）
 const SY_QUAL = '西南部|东南部|西北部|东北部|南部|北部|东部|西部|中部|大部';
@@ -2597,9 +2676,11 @@ function syGrade(s) {                                     // 文中降雨等级 
 }
 function syParse(text, now = new Date(), warnSet = '') {   // warnSet：手动选择的预警级别（'' 按原文识别，'none' 无预警，或 蓝色 / 黄色 / 橙色 / 红色）                // now：参考时刻（发布时间；未填为当前时间），用于“当前”“明天”和只写“日”的日期
   const ymd = k => { const d = new Date(now); d.setDate(d.getDate() + k); return `${d.getMonth() + 1}月${d.getDate()}日`; };
-  const t = String(text || '').replace(/\s+/g, '').replace(/[～~—–－]/g, '-')
+  let t = String(text || '').replace(/\s+/g, '').replace(/[～~—–－]/g, '-')
     .replace(/(当前|目前|现在)(?=至|到|-)/, () => `${ymd(0)}${now.getHours()}时`).replace(/今天|今日/g, ymd(0)).replace(/明天|明日/g, ymd(1)).replace(/后天/g, ymd(2)), out = { rows: [], notes: [] };
-  const R = '(\\d+(?:\\.\\d+)?)', TO = '(?:毫米)?(?:至|到|-)', WORD = Object.keys(SY_T0).sort((a, b) => b.length - a.length).join('|');
+  // 2026-11-19：“预计”之前是已出现的降雨（“9日夜间我市已出现明显降雨。预计…”“目前降水已明显减弱。预计…”）：不计入情景，预警等级仍从全文识别
+  let tPre = ''; { const ip = t.indexOf('预计'); if (ip > 0 && /已(?:出现|有|经)|目前|截至/.test(t.slice(0, ip))) { tPre = t.slice(0, ip); t = t.slice(ip); out.notes.push('原文“预计”之前为已出现的降雨，不计入情景'); } }
+  const R = '(\\d+(?:\\.\\d+)?)', TO = '(?:毫米)?(?:至|到|-)', VB = '(?:将)?(?:为|可达|达到|达|有|在|约|超过|超)?', WORD = Object.keys(SY_T0).sort((a, b) => b.length - a.length).join('|');
   const p2 = n => String(n).padStart(2, '0');
   // 时间：首个“[年]月日[HH时 | 时段]”为开始；“至/到[[月]日][HH时 | 时段]”为结束（只写时段或钟点时同日，钟点早于开始则跨日）
   // “29日夜间至8月1日”这类开头不写月份的，月份按结束日推断（29 > 1 则为上月）
@@ -2626,7 +2707,9 @@ function syParse(text, now = new Date(), warnSet = '') {   // warnSet：手动�
   const fmt = st => `${st.getFullYear()}-${p2(st.getMonth() + 1)}-${p2(st.getDate())}T${p2(st.getHours())}:00`;
   let sp = span(tt);
   // 原文写了“X 为主降雨时段 / 主降雨时段为 X”：按主时段模拟（过程总雨量放进主时段），整个过程时段写进提示
-  const mm0 = tt.match(/([^，。；;]*?)(?:为|是)主要?(?:降雨|降水)?时段/) || tt.match(/主要?(?:降雨|降水)?时段(?:为|在|是)([^，。；;]*)/);
+  const mm0 = tt.match(/([^，。；;]*?)(?:为|是)主要?(?:降雨|降水)?时段/) || tt.match(/主要?(?:降雨|降水)?时段(?:为|在|是)([^，。；;]*)/)
+    || tt.match(/(?:最强|较强|强|集中)(?:降雨|降水)时段(?:为|在|是)([^，。；;]*)/)
+    || tt.match(/(?:最强|主要|强)(?:降雨|降水)?集中(?:在|于)([^，。；;]*)/) || tt.match(/主要影响时(?:间|段)(?:为|在|是)([^，。；;]*)/);   // “最强降雨集中在…”“主要影响时间为…”   // 2026-11-19：认“最强降雨时段为…”
   let sm = null;
   if (mm0 && sp) {                                          // 只写钟点（“主要时段为16时至20时”）时用过程开始日期，早于开始则顺延一天
     const s1 = /月\d{1,2}日/.test(mm0[1]) ? mm0[1] : `${sp[0].getMonth() + 1}月${sp[0].getDate()}日${mm0[1]}`;
@@ -2661,15 +2744,30 @@ function syParse(text, now = new Date(), warnSet = '') {   // warnSet：手动�
   if (m) out.bg = rng(m[1], m[2]);
   // 最大小时雨量；另认“大部分地区 / 部分地区小时雨量可达 X 毫米”（“6小时降雨量”等多小时雨量不算）
   m = t.match(new RegExp(`最大小时(?:雨量|雨强|降雨量|降水量)(?:为|可达|有|在|约)?${R}${TO}${R}毫米`)) || t.match(new RegExp(`最大小时(?:雨量|雨强|降雨量|降水量)(?:为|可达|有|在|约)?${R}毫米`))
-    || t.match(new RegExp(`(?<![\\d小])小时(?:雨量|雨强|降雨量|降水量)(?:为|可达|达|有|在|约)?${R}(?:${TO}${R})?毫米`));
+    || t.match(new RegExp(`(?<![\\d小])(?:1|一)?小时(?:雨量|雨强|降雨量|降水量)${VB}${R}(?:${TO}${R})?毫米`));
   if (m) out.mh = rng(m[1], m[2]);
-  const most = (t.match(new RegExp(`大部分地区(?<![\\d])小时(?:雨量|雨强|降雨量|降水量)(?:为|可达|达|有|在|约)?${R}`)) || [])[1];
-  const multi = [...t.matchAll(new RegExp(`(\\d{1,2})小时(?:降雨量|降水量|雨量)(?:为|可达|达|有|在|约)?${R}毫米`, 'g'))];
+  const most = (t.match(new RegExp(`大部分?地区[^，。；;\\d]{0,6}(?:1|一)?小时(?:雨量|雨强|降雨量|降水量)${VB}${R}`)) || [])[1];
+  const multi = [...t.matchAll(new RegExp(`(\\d{1,2})小时(?:累计)?(?:降雨量|降水量|雨量)${VB}${R}毫米`, 'g'))];   // 2026-11-19：认“6小时累计雨量”
   const d24 = multi.find(x => +x[1] === 24);
-  multi.filter(x => +x[1] !== 24).forEach(x => out.notes.push(`${x[1]} 小时雨量 ${x[2]} mm 只作参考，未单独使用`));
+  multi.filter(x => +x[1] !== 24).forEach(x => out.notes.push(+x[1] === 6 ? `6 小时雨量 ${x[2]} mm 用于雨量集中段（不作过程雨量）` : `${x[1]} 小时雨量 ${x[2]} mm 只作参考，未单独使用`));
+  // 2026-11-19：“大部分地区…24小时累计雨量 X 毫米以上”是全市量级（原文没写全市平均时用它；没点名的区按参考数值预报的相对多少分配）
+  if (!out.bg) {
+    const MS = '(?:(?!其中|(?<!大)部分地区|局地|局部|个别)[^。；;])*?';                                // 2026-11-19：不越过“其中 / 部分地区 / 局地 / 个别”
+    const mb = t.match(new RegExp(`大部分?地区${MS}24小时(?:累计)?(?:降雨量|降水量|雨量)${VB}${R}(?:${TO}${R})?毫米(以上)?`));
+    if (mb) { out.bg = mb[2] ? rng(mb[1], mb[2]) : mb[3] ? [+mb[1], syNext(+mb[1])] : rng(mb[1]); out.bgMost = true; out.bgH6 = syH6(mb[0]);
+      out.notes.push(`“大部分地区 24 小时雨量 ${mb[1]}${mb[2] ? '–' + mb[2] : ''} 毫米${mb[3] || ''}”作为全市平均 ${out.bg.join('–')} mm（过程雨量按最强 24 h 计）`); }
+    else {                                                   // “大部分地区累计雨量可达 X 毫米以上”“大部分地区…6小时降雨量超过 X 毫米”：全市量级（6 h 时过程雨量取 X 至下一档，并作集中段）
+      const mc = t.match(new RegExp(`大部分?地区${MS}(?<!\\d小时)累计(?:降雨量|降水量|雨量)${VB}${R}(?:${TO}${R})?毫米(以上)?`)),
+        m6 = !mc && t.match(new RegExp(`大部分?地区${MS}(?<!\\d)6小时(?:累计)?(?:降雨量|降水量|雨量)${VB}${R}(?:${TO}${R})?毫米(以上)?`)), mm_ = mc || m6;
+      if (mm_) { out.bg = mm_[2] ? rng(mm_[1], mm_[2]) : (mm_[3] || /超过?$/.test(mm_[0].slice(0, mm_[0].lastIndexOf(mm_[1])))) ? [+mm_[1], syNext(+mm_[1])] : rng(mm_[1]); out.bgMost = true; out.bgEst = !!m6;
+        if (m6) out.bgH6 = [+mm_[1], +mm_[1]];
+        const pk = (t.slice(mm_.index).split(/[。；;]/)[0].match(new RegExp(`个别(?:点位|点|站点|地区)?[^\\d，,。]{0,10}?${R}毫米`)) || [])[1]; if (pk) out.peakCity = +pk;
+        out.notes.push(m6 ? `“大部分地区 6 小时雨量 ${mm_[1]} 毫米以上”：全市平均按 ${out.bg.join('–')} mm（降雨集中在 6 h 内）` : `“大部分地区累计雨量 ${mm_[1]} 毫米${mm_[3] || ''}”作为全市平均 ${out.bg.join('–')} mm`); }
+    }
+  }
   // 分区 / 局地：逐句找区名或方位词 + 雨量（毫米数优先，没有毫米数时用降雨等级或暴雨预警颜色）
   const WARN = /暴雨(蓝色|黄色|橙色|红色)预警(?:信号)?/g;
-  const wall = warnSet === 'none' ? [] : SY_WARN_STD[warnSet] ? [warnSet] : [...t.matchAll(WARN)].map(x => x[1]);
+  const wall = warnSet === 'none' ? [] : SY_WARN_STD[warnSet] ? [warnSet] : [...(tPre + t).matchAll(WARN)].map(x => x[1]);
   if (SY_WARN_STD[warnSet]) out.warnManual = true;
   if (wall.length) {                                         // 取文中最高一级；按北京市暴雨预警信号标准给出小时雨强与 6 h 雨量门槛
     out.warn = wall.reduce((a, b) => SY_WARN_ORDER.indexOf(b) > SY_WARN_ORDER.indexOf(a) ? b : a);
@@ -2681,24 +2779,34 @@ function syParse(text, now = new Date(), warnSet = '') {   // warnSet：手动�
     if (/全市|最大小时/.test(sen) && !/区/.test(sen.replace(/全市[^，,]*/, ''))) return;
     let last = null;                                       // 本句上一次出现的区：“部分地区 / 局地 / 个别点 …毫米”没写区名时归到这里
     sen.split(/，(?=[^，]*(?:区|部|城区))/).forEach(cl => {
-      const body = cl.replace(/全市[^，,]*[，,]?/, '').replace(/最大小时[^，,]*/, '').replace(/(?<!\d)小时(?:雨量|雨强)[^，,]*/, '');
+      const body = cl.replace(/全市[^，,]*[，,]?/, '').replace(/最大小时[^，,]*/, '').replace(/(?<!\d)(?:1|一)?小时(?:雨量|雨强|降雨量|降水量)[^，,或、]*/g, '');
       const ds = new Set(); let txt = body.replace(/分区|地区|山区|浅山区/g, '|');
       SY_SHORT.forEach(([sh, d]) => { txt = txt.replace(new RegExp(`${sh}(?:区)?(${SY_QUAL})`, 'g'), (s0, q) => {
         out.notes.push(`“${sh}${q}”按${d}整区处理（雨团在区中心，可在地图上拖到${q.replace('大部', '区内')}）`); (out.part = out.part || {})[d] = q; return sh + '|'; }); });
       Object.keys(SY_REGION).sort((a, b) => b.length - a.length).forEach(k => { if (txt.includes(k)) { SY_REGION[k].forEach(d => ds.add(d)); txt = txt.split(k).join('|'); out.notes.push(`“${k}”按 ${SY_REGION[k].map(d => d.replace(/区$/, '')).join('、')} 处理`); } });
       SY_SHORT.forEach(([sh, d]) => { if (txt.includes(sh)) ds.add(d); });
       // 局地与否看第一个雨量数字所在的分句；“个别点（位）…X 毫米”另作极值
-      const pcs = body.split(/[，,]/), mainPc = pcs.find(x => new RegExp(`${R}毫米`).test(x)) || body;
-      const local = /局地|局部|个别|(?<!大)部分地区/.test(mainPc) || /(?<!大)部分地区/.test(pcs[0]);   // “××等区的部分地区，6小时累计雨量可达70毫米”也算局地
-      const nb = body.replace(/(?<!\d)(?!24)(\d{1,2})小时(?:降雨量|降水量|雨量)[^、，,]*/g, '');   // 6 小时等短时段雨量不当作过程雨量
-      const nums = [...nb.matchAll(new RegExp(`${R}(?:毫米)?(?:(?:至|到|-)${R})?毫米`, 'g'))];
+      const pcs = body.split(/[，,]/); let mainPc = pcs.find(x => new RegExp(`${R}毫米`).test(x)) || body;
+      let local = /局地|局部|个别|(?<!大)部分地区/.test(mainPc) || /(?<!大)部分地区/.test(pcs[0]);   // “××等区的部分地区，6小时累计雨量可达70毫米”也算局地
+      // 6 小时等短时段雨量不当作过程雨量；2026-11-19：本分句只写了短时段雨量（如“6小时累计雨量可达70毫米”）时仍用它（与原做法一致）
+      const NUMRE = new RegExp(`${R}(?:毫米)?(?:(?:至|到|-)${R})?毫米`, 'g');
+      let short = false, nb = body.replace(/(?<!\d)(?!24)(\d{1,2})小时(?:累计)?(?:降雨量|降水量|雨量)[^、，,]*/g, ''), nums = [...nb.matchAll(NUMRE)];
+      if (![...nb.replace(/个别(?:点位|点|站点|地区)?[^\d，,。]{0,10}?\d+(?:\.\d+)?毫米/g, '').matchAll(NUMRE)].length) { short = true; nb = body; nums = [...nb.matchAll(NUMRE)]; }
+      if (nums.length) {                                    // 2026-11-19：局地与否看第一个雨量数字所在的小句（短时段雨量已剔除后）
+        const i0 = nums[0].index, a0 = Math.max(nb.lastIndexOf('，', i0), nb.lastIndexOf(',', i0)) + 1, b0 = nb.slice(i0).search(/[，,]/);
+        mainPc = nb.slice(a0, b0 < 0 ? undefined : i0 + b0); local = /局地|局部|个别|(?<!大)部分地区/.test(mainPc) || /(?<!大)部分地区/.test(pcs[0]);
+      }
       const tgt = ds.size ? ds : local && last ? last : null;
       if (!tgt) return;
       if (ds.size) last = ds;
       let main, how = '';
-      if (nums.length) {
+      const onlyPeak = nums.length && /个别/.test(mainPc) && tgt.size > 1 && out.warn;
+      if (onlyPeak) {                                       // 2026-11-19：多区只写了“个别点累计 X 毫米”：各区按预警 6 h 标准，X 作为局地上限（不把 X 给每个区）
+        const S = SY_WARN_STD[out.warn]; main = [S.h6, Math.max(syNext(S.h6), +nums[0][1])];
+        out.notes.push(`多区只写了“个别点 ${nums[0][1]} 毫米”：各区局地雨团按${out.warn}预警 6 h 标准 ${S.h6} mm 起、上限 ${main[1]} mm`);
+      } else if (nums.length) {
         main = rng(nums[0][1], nums[0][2]);
-        if (main[0] === main[1] && /^以上/.test(nb.slice(nums[0].index + nums[0][0].length))) {   // “X 毫米以上”：上限取下一档
+        if (main[0] === main[1] && (/^以上/.test(nb.slice(nums[0].index + nums[0][0].length)) || /超过?$/.test(nb.slice(0, nums[0].index)))) {   // 2026-11-19：“超过 X 毫米”同“X 毫米以上”   // “X 毫米以上”：上限取下一档
           main = [main[0], syNext(main[0])]; out.notes.push(`“${main[0]} 毫米以上”按 ${main.join('–')} mm（上限取下一档）`); }
       } else {
         const gw = syGrade(body.replace(WARN, ''));
@@ -2718,7 +2826,8 @@ function syParse(text, now = new Date(), warnSet = '') {   // warnSet：手动�
       }
       [...tgt].forEach(d => {
         if (out.rows.some(r => r.d === d && r.t === (local ? 'local' : 'area'))) return;
-        out.rows.push(local ? { t: 'local', d, lo: main[0], hi: peak ? Math.max(+peak, main[1]) : main[1], off: 0 } : { t: 'area', d, lo: main[0], hi: main[1], off: 0 });
+        const h6 = !short && !local ? syH6(body) : null;
+        out.rows.push(local ? { t: 'local', d, lo: main[0], hi: peak && !onlyPeak ? Math.max(+peak, main[1]) : main[1], off: 0 } : { t: 'area', d, lo: main[0], hi: main[1], off: 0, ...(h6 ? { h6 } : {}) });
       });
       if (!local && peak && +peak > main[1]) {             // 分区句里另有“个别点 X 毫米”：没写位置，放一个局地雨团在本句第一个区，可在地图上拖动
         let d0 = [...tgt][0], bi = 1e9;                      // 取原文里最先出现的区（如“南部、西部以及城区”取房山）
@@ -2742,6 +2851,10 @@ function syParse(text, now = new Date(), warnSet = '') {   // warnSet：手动�
       if (bg) { out.bg = bg; out.bgEst = true; out.notes.push(`全市平均 ${bg.join('–')} mm 为${why}，不是原文数字，可在“核对 / 修改”里改`); }
     }
   }
+  if (!out.bg && out.rows.some(r => r.t === 'area')) {   // 2026-11-19：“我市有暴雨，其中××区有大暴雨”：分区之外的全市量级按等级换算（作背景）
+    const cs = (t.match(/(?:我市|全市|本市)(?:将)?(?:有|出现)([^，。；;]{1,12}?雨)/) || [])[1], g = cs && syGrade(cs);
+    if (g) { out.bg = g; out.bgEst = true; out.notes.push(`“我市有${cs}”：分区以外按降雨等级 ${g.join('–')} mm 作全市量级（估计）`); }
+  }
   if (!out.bg && out.warn && !out.rows.some(r => r.t === 'area')) {   // 只有预警、没写全市雨量：全市平均按预警等级约定（部分地区达到预警标准，全市平均低于门槛）
     out.bg = [...SY_WARN_STD[out.warn].city]; out.bgEst = true;
     out.notes.push(`全市平均 ${out.bg.join('–')} mm 为按${out.warn}预警的约定值（预警只说明部分地区达到标准），不是原文数字，可在“核对 / 修改”里改`);
@@ -2749,7 +2862,7 @@ function syParse(text, now = new Date(), warnSet = '') {   // warnSet：手动�
   // 局地值已落在本区分区范围内（如大暴雨 100–250 mm 内的“部分地区 200 mm”）：不再单独加局地雨团，避免雨团过多、重复计雨
   const cov = out.rows.filter(r => r.t === 'local' && out.rows.some(q => q.t === 'area' && q.d === r.d && q.hi >= r.hi));
   if (cov.length) { out.rows = out.rows.filter(r => !cov.includes(r)); out.notes.push(`“局地 ${cov[0].lo} mm”在所在区的分区雨量范围内，已并入分区雨团（${cov.length} 个区）`); out.localMerged = cov.length; }
-  if (d24 && !out.rows.some(r => r.t === 'local') && !cov.length) out.notes.push(`24 小时雨量 ${d24[2]} mm 未找到对应区`);
+  if (d24 && !out.bgMost && !out.rows.some(r => r.t === 'local') && !cov.length) out.notes.push(`24 小时雨量 ${d24[2]} mm 未找到对应区`);
   const mv = t.match(/自(西北|西南|东北|东南|西|东|南|北)向(西北|西南|东北|东南|西|东|南|北)/);
   if (mv) {                                                  // “自西向东（先后）”：按区质心沿移动方向的先后，把各区雨团开始时刻依次推后（雨团本身不移动）
     const a = SY_DIR[mv[1]], b = SY_DIR[mv[2]], v = [b[0] - a[0], b[1] - a[1]], ds = [...new Set(out.rows.map(r => r.d))], cs = {};
@@ -2771,7 +2884,7 @@ function syParse(text, now = new Date(), warnSet = '') {   // warnSet：手动�
 function syApply(p) {                                     // 解析结果写入表单；无雨量时清空雨量表
   if (p.start) syStart.value = p.start;
   if (p.dur) syDur.value = p.dur;
-  SC.syMain = p.main ? { m: p.main, start: p.start, dur: p.dur } : null; SC.syWarn = p.warn || null; syWarnShow(p.warn, p.warnManual); SC.syPeak = p.peakCity || null; SC.syMove = p.move || null;
+  SC.syMain = p.main ? { m: p.main, start: p.start, dur: p.dur } : null; SC.syBgMost = !!p.bgMost; SC.syBgH6 = p.bgH6 || null; SC.syWarn = p.warn || null; syWarnShow(p.warn, p.warnManual); SC.syPeak = p.peakCity || null; SC.syMove = p.move || null;
   syBgLo.value = p.bg ? p.bg[0] : ''; syBgHi.value = p.bg ? p.bg[1] : '';
   syMhLo.value = p.mh ? p.mh[0] : ''; syMhHi.value = p.mh ? p.mh[1] : '';
   if (p.by && !syBy.value.trim()) syBy.value = p.by;
@@ -2903,6 +3016,199 @@ rpSave.onclick = async () => {
 rpReset.onclick = () => { rpFill(RP_DEF); rpMsg.textContent = '已填入默认值，点“保存运行参数”生效'; };
 navSet.onclick = () => { rpLoad(); setWrap.style.display = 'flex'; tdtKey.value = lsGet(TDT_KEY); tdtDef.checked = lsGet(TDT_DEF) === '1'; tdtMsg.textContent = ''; srcLoad(); };
 setClose.onclick = () => { setWrap.style.display = 'none'; };
+// ---------- 数据管理（2026-11-19，专业模式）：数据获取 / 上传数据 / 结果下载 / 运行进度；接口 /api/dm/*（data_manager.py）
+const DM = { T: 0, info: null, run: '', layers: [] };
+const dmU = (p, q) => SC_API + '/api/dm/' + p + (q ? '?' + new URLSearchParams(q) : '');
+const dmSize = n => n == null ? '' : n >= 2 ** 20 ? (n / 2 ** 20).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+const dmBar = (pct, cls = '') => `<div class="dmBar ${cls}"><i style="width:${Math.max(0, Math.min(100, pct || 0))}%"></i></div>`;
+navDm.onclick = () => { dmWrap.style.display = 'flex'; dmOpen(); };
+dmClose.onclick = () => { dmWrap.style.display = 'none'; clearTimeout(DM.T); };
+async function dmOpen() {
+  try {
+    const j = await scApi('/api/dm/info'); DM.info = j; dmConn.textContent = '';
+    const keep = dmSrc.value;
+    dmSrc.innerHTML = j.sources.map(s => `<option value="${s.id}" ${s.available ? '' : 'disabled'} title="${esc(s.note)}">${esc(s.label)}${!s.available ? '（' + (s.id === 'cma_meso' ? '待开通权限' : s.mswep ? '未缓存' : '手动上传') + '）' : s.mswep ? '' : `（${s.from} 起）`}</option>`).join('');
+    if (keep && j.sources.some(s => s.id === keep && s.available)) dmSrc.value = keep;
+    dmSrcInfo();
+    dmKind.innerHTML = '<option value="auto">自动识别</option>' + Object.entries(j.kinds).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('');
+    dmGet.disabled = !j.fetch; dmUp.disabled = !j.upload;
+    if (!j.upload) dmUpMsg.textContent = '本服务器未开放上传';
+    if (!dmStart.value) { const d = new Date(Date.now() - 864e5); d.setMinutes(0, 0, 0); dmStart.value = new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16); }
+  } catch (e) { dmConn.innerHTML = `<span class="dmErr">连接本机服务失败：${esc(e.message)}</span>`; return; }
+  dmRuns(); dmUploads(); dmTick();
+}
+async function dmTick() {                                   // 窗口打开时每 5 s 刷新进度与获取任务
+  clearTimeout(DM.T);
+  if (dmWrap.style.display !== 'flex') return;
+  try { await Promise.all([dmProgress(), dmJobs()]); } catch (e) { }
+  DM.T = setTimeout(dmTick, 5000);
+}
+async function dmProgress() {
+  const j = await scApi('/api/dm/progress');
+  dmProg.innerHTML = j.items.map(x => {
+    const bad = x.state === 'failed', ok = x.state === 'done', pct = x.pct != null ? x.pct : ok ? 100 : x.stage_i != null ? Math.round(100 * x.stage_i / x.n_stage) : 0;
+    const txt = bad ? `<span class="dmErr">${esc(x.error || '失败')}</span>` : x.state === 'running' && x.pct != null && x.kind !== '数据获取'
+      ? `模型 ${x.pct}%${x.remain_s != null ? `，约剩 ${x.remain_s >= 90 ? Math.round(x.remain_s / 60) + ' 分钟' : Math.round(x.remain_s) + ' 秒'}` : ''}`
+      : ok ? (x.run_minutes != null ? `用时 ${x.run_minutes} 分钟` : esc(x.finished || '')) : esc(x.msg || '');
+    return `<tr><td>${x.kind}</td><td>${esc(x.name || x.id)}</td><td>${esc(x.stage || '')}</td><td>${dmBar(pct, ok ? 'ok' : bad ? 'bad' : '')}<span class="nc-note">${txt}</span></td></tr>`;
+  }).join('') || '<tr><td colspan="4" class="dmMute">暂无</td></tr>';
+}
+async function dmJobs() {
+  const j = await scApi('/api/dm/fetch');
+  dmJobs_.innerHTML = j.jobs.map(x => {
+    const r = 'fj:' + x.id, f = k => dmU('file', { run: r, f: k });
+    const st = x.state === 'done' ? `完成${x.mean_mm != null ? `，北京平均 ${x.mean_mm} mm` : ''}` : x.state === 'failed' ? `<span class="dmErr">${esc(x.error || '失败')}</span>`
+      : dmBar(x.total ? 100 * x.done / x.total : 3) + `<span class="nc-note">${esc(x.msg || '排队')}</span>`;
+    return `<tr><td>${esc(x.label)} ${esc(x.start_local)} 起 ${x.hours} h（${x.area === 'beijing' ? '北京市' : '计算域'}）</td><td>${st}</td><td>${x.state === 'done'
+      ? `<a href="${f('rain_hourly.nc')}">逐时.nc</a><a href="${f('rain_total_mm.tif')}">总雨量.tif</a><a href="${f('districts_hourly.csv')}">各区逐时.csv</a><a href="#" data-j="${esc(x.id)}">模拟…</a>` : ''}</td></tr>`;
+  }).join('') || '<tr><td colspan="3" class="dmMute">还没有获取过数据</td></tr>';
+  dmJobs_.querySelectorAll('a[data-j]').forEach(a => a.onclick = e => { e.preventDefault(); dmShowJob(j.jobs.find(x => x.id === a.dataset.j)); });
+}
+const dmJobs_ = document.getElementById('dmJobs');
+function dmSrcInfo(pick) {                                  // MSWEP：列出本机已缓存时段；切换时默认填第一个缓存时段
+  const s = (DM.info?.sources || []).find(x => x.id === dmSrc.value);
+  if (!s || !s.mswep) { dmSrcNote.textContent = ''; return; }
+  dmSrcNote.textContent = s.cached.length ? '可取：' + s.cached.join('、') + (s.download ? '；其他时段在线下载' : '') : (s.download ? '在线下载' : '');
+  const m = pick && s.cached[0] && s.cached[0].match(/^(\S+) (\S+) 至 (\S+) (\S+)$/);
+  if (m) { dmStart.value = `${m[1]}T${m[2]}`; dmHours.value = Math.min(72, Math.round((new Date(`${m[3]}T${m[4]}`) - new Date(`${m[1]}T${m[2]}`)) / 36e5)); }
+}
+dmSrc.onchange = () => dmSrcInfo(true);
+dmGet.onclick = async () => {
+  if (!dmStart.value) { dmGetMsg.textContent = '请选开始时刻'; return; }
+  const h = +dmHours.value;
+  if (!(h >= 1 && h <= (DM.info?.max_fetch_hours || 240))) { dmGetMsg.textContent = `时长须为 1–${DM.info?.max_fetch_hours || 240} h`; return; }
+  dmGetMsg.textContent = '提交中…';
+  try { await scApi('/api/dm/fetch', { source: dmSrc.value, start: dmStart.value.replace('T', ' '), hours: h, area: dmArea.value }); dmGetMsg.textContent = '已提交，见下表进度'; dmTick(); }
+  catch (e) { dmGetMsg.innerHTML = `<span class="dmErr">${esc(e.message)}</span>`; }
+};
+dmUp.onclick = () => {
+  const f = dmFile.files[0];
+  if (!f) { dmUpMsg.textContent = '请先选择文件'; return; }
+  const max = (DM.info?.max_upload_mb || 2048) * 2 ** 20;
+  if (f.size > max) { dmUpMsg.textContent = `文件超过 ${DM.info.max_upload_mb} MB，请分批上传`; return; }
+  const x = new XMLHttpRequest(); dmUpBar.hidden = false; dmUpBar.className = 'dmBar'; dmUpBar.firstChild.style.width = '0'; dmUp.disabled = true;
+  x.upload.onprogress = e => { if (e.lengthComputable) { dmUpBar.firstChild.style.width = (100 * e.loaded / e.total) + '%'; dmUpMsg.textContent = `上传中 ${dmSize(e.loaded)} / ${dmSize(e.total)}`; } };
+  x.upload.onload = () => { dmUpMsg.textContent = '上传完成，检查中…'; };
+  x.onloadend = () => {
+    dmUp.disabled = false; let j = {};
+    try { j = JSON.parse(x.responseText); } catch (e) { }
+    if (x.status === 200 && j.upload) { dmUpBar.className = 'dmBar ok'; dmUpMsg.textContent = '已上传，识别结果见弹窗'; dmShowUp(j.upload); dmUploads(); }
+    else { dmUpBar.className = 'dmBar bad'; dmUpMsg.innerHTML = `<span class="dmErr">上传失败：${esc(j.error || (x.status === 413 ? '文件超过服务器上传上限' : x.status ? 'HTTP ' + x.status : '连接中断'))}</span>`; }
+  };
+  x.open('POST', dmU('upload', { name: f.name, kind: dmKind.value })); x.setRequestHeader('Content-Type', 'application/octet-stream'); x.send(f);
+};
+dmPopClose.onclick = () => { dmPopWrap.style.display = 'none'; };
+function dmShowUp(u) {                                       // 一次上传的识别结果（弹窗）：摘要、提示、字段对应（可改后重新检查）、去向、地图显示、可选提交模拟
+  const kv = Object.entries(u.summary || {}).map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join('');
+  const fl = u.fields && u.fields.options ? u.fields : null;
+  const keys = u.kind === 'station' ? [['time', '时间'], ['lon', '经度'], ['lat', '纬度'], ['value', '雨量'], ['station', '站号']]
+    : [['var', '降水变量'], ['lat', '纬度'], ['lon', '经度'], ['time', '时间']];
+  const sel = (k, opts, v) => `<select data-k="${k}" style="width:auto;max-width:150px">${['', ...opts].map(o => `<option ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
+  const tz = fl ? `　时区 <select data-k="tz" style="width:auto"><option value="bjt" ${fl.tz === 'bjt' ? 'selected' : ''}>北京时间</option><option value="utc" ${fl.tz === 'utc' ? 'selected' : ''}>UTC</option></select>` : '';
+  const map_ = fl ? `<tr><th>字段对应</th><td>${keys.map(([k, n]) => `${n} ${sel(k, fl.options, fl[k] || '')}`).join('　')}`
+    + (u.kind === 'station' ? `　单位 <select data-k="unit" style="width:auto">${['mm/h', 'mm（时段累计）'].map(o => `<option ${o === fl.unit ? 'selected' : ''}>${o}</option>`).join('')}</select>` : '')
+    + tz + ` <button class="btn" id="dmRe">重新检查</button></td></tr>` : '';
+  dmPopT.textContent = '识别结果';
+  dmPopBody.innerHTML = `<table class="dmKv"><tr><th>文件</th><td>${esc(u.name)}（${dmSize(u.size)}${u.n_files > 1 ? `，解压 ${u.n_files} 个文件` : ''}）</td></tr>`
+    + `<tr><th>识别为</th><td>${esc(u.kind_label || u.kind || '')}</td></tr>${kv}${map_}`
+    + (u.warnings || []).map(w => `<tr><th>提示</th><td class="dmErr">${esc(w)}</td></tr>`).join('')
+    + (u.error ? `<tr><th>${u.state === 'need_mapping' ? '待补充' : '失败'}</th><td class="dmErr">${esc(u.error)}</td></tr>` : '')
+    + (u.use ? `<tr><th>去向</th><td>${esc(u.use)}${u.overlay ? ` <button class="btn" id="dmShow">在地图上显示</button>` : ''}<div class="nc-note">保存位置：0Forecast/dm/uploads/${esc(u.id)}/</div></td></tr>` : '') + '</table>';
+  dmPopWrap.style.display = 'flex';
+  const re = document.getElementById('dmRe');
+  if (re) re.onclick = async () => {
+    const mp = {}; dmPopBody.querySelectorAll('select[data-k]').forEach(s => { if (s.value) mp[s.dataset.k] = s.dataset.k === 'unit' ? (s.value.startsWith('mm/h') ? 'mm/h' : 'mm') : s.value; });
+    try { const j = await scApi(`/api/dm/uploads/${u.id}/inspect`, { kind: u.kind, mapping: mp }, 60000); dmShowUp(j.upload); dmUploads(); }
+    catch (e) { dmSimMsg.innerHTML = `<span class="dmErr">${esc(e.message)}</span>`; }
+  };
+  const sh = document.getElementById('dmShow');
+  if (sh) sh.onclick = () => { dmPopWrap.style.display = 'none'; dmOverlay(u); };
+  dmSimSetup(u.kind === 'grid_rain' && u.state === 'ok' ? 'up:' + u.id : null, u.name);
+}
+async function dmSimSetup(src, name) {                       // 格点降水：可选“提交模拟”（按实况同样方式进模型，排队运行）
+  dmSim.hidden = true; dmSimMsg.textContent = '';
+  if (!src) return;
+  try {
+    const s = await scApi('/api/dm/sim?src=' + encodeURIComponent(src), null, 30000);
+    dmSim.hidden = false; DM.sim = s;
+    dmSimSpan.textContent = `${s.start} 至 ${s.end}（北京时间，${s.hours} h）`;
+    dmSimStart.value = s.start.replace(' ', 'T'); dmSimH.value = s.hours; dmSimName.value = (name || '').replace(/\.[^.]+$/, '').slice(0, 40);
+    dmSimGo.disabled = !s.can; if (!s.can) dmSimMsg.innerHTML = `<span class="dmErr">${esc(s.reason)}</span>`;
+  } catch (e) { dmSim.hidden = false; dmSimSpan.innerHTML = `<span class="dmErr">${esc(e.message)}</span>`; dmSimGo.disabled = true; }
+}
+dmSimGo.onclick = async () => {
+  const s = DM.sim; if (!s) return;
+  const h = +dmSimH.value, tail = +dmSimTail.value;
+  if (!(h >= 1 && h <= 240) || !(tail >= 0 && tail <= 48)) { dmSimMsg.innerHTML = '<span class="dmErr">时长须为 1–240 h，雨后 0–48 h</span>'; return; }
+  dmSimGo.disabled = true; dmSimMsg.textContent = '提交中…';
+  try {
+    const j = await scApi('/api/scenarios', { grid: { src: s.src, start_local: dmSimStart.value.replace('T', ' '), hours: h }, tail_hours: tail, name: dmSimName.value }, 60000);
+    dmSimMsg.textContent = `已提交（${j.id}），排队运行；进度见“运行进度”，完成后在“洪水预报 → 降雨情景”中查看`;
+    if (typeof SC !== 'undefined' && SC && SC.seen) SC.seen[j.id] = 'queued';
+    if (typeof scPing === 'function') scPing(); dmProgress();
+  } catch (e) { dmSimMsg.innerHTML = `<span class="dmErr">${esc(e.message)}</span>`; }
+  dmSimGo.disabled = false;
+};
+function dmShowJob(x) {                                      // 数据获取结果的弹窗：摘要 + 可选提交模拟
+  dmPopT.textContent = '获取结果';
+  dmPopBody.innerHTML = `<table class="dmKv"><tr><th>数据</th><td>${esc(x.label)}，${esc(x.start_local)} 起 ${x.hours} h（${x.area === 'beijing' ? '北京市' : '模型计算域'}）</td></tr>`
+    + `<tr><th>北京平均</th><td>${x.mean_mm ?? '—'} mm，最大格点 ${x.max_mm ?? '—'} mm</td></tr>`
+    + `<tr><th>保存位置</th><td>0Forecast/dm/fetch/${esc(x.id)}/</td></tr></table>`;
+  dmPopWrap.style.display = 'flex';
+  dmSimSetup('fj:' + x.id, `${x.label} ${x.start_local.slice(5, 13)}时起`);
+}
+async function dmOverlay(u) {                                // 上传的矢量 / 栅格叠加到地图（临时图层，再点一次“清除”或刷新页面即去掉）
+  try {
+    let ly;
+    if (u.overlay === 'geojson') {
+      const g = await (await fetch(dmU('overlay', { id: u.id, f: 'geojson' }))).json();
+      ly = L.geoJSON(g, { style: { color: '#d35400', weight: 2 }, pointToLayer: (f, ll) => L.circleMarker(ll, { radius: 5, color: '#d35400' }),
+        onEachFeature: (f, l) => l.bindPopup(Object.entries(f.properties || {}).slice(0, 12).map(([k, v]) => `${esc(k)}：${esc(String(v))}`).join('<br>')) });
+    } else {
+      const m = await (await fetch(dmU('overlay', { id: u.id, f: 'json' }))).json();
+      ly = L.imageOverlay(dmU('overlay', { id: u.id, f: 'png' }), m.bounds, { opacity: 0.75 });
+    }
+    ly.addTo(map); DM.layers.push(ly); try { map.fitBounds(ly.getBounds(), { maxZoom: 12 }); } catch (e) { }
+    dmWrap.style.display = 'none'; clearTimeout(DM.T);
+    dmLyClear.hidden = false;
+  } catch (e) { dmUpMsg.innerHTML = `<span class="dmErr">显示失败：${esc(e.message)}</span>`; }
+}
+const dmLyClear = Object.assign(document.createElement('button'), { className: 'btn', textContent: '清除上传图层', hidden: true });
+dmLyClear.style.cssText = 'position:absolute;left:54px;bottom:24px;z-index:1000';
+dmLyClear.onclick = () => { DM.layers.forEach(l => l.remove()); DM.layers = []; dmLyClear.hidden = true; };
+map.getContainer().appendChild(dmLyClear);
+async function dmUploads() {
+  try {
+    const j = await scApi('/api/dm/uploads');
+    dmUps.innerHTML = j.uploads.slice(0, 8).map((u, i) => `<tr><td><a href="#" data-i="${i}">${esc(u.name)}</a> <span class="nc-note" style="display:inline">${esc((u.created || '').slice(5, 16))}</span></td>`
+      + `<td>${esc(u.kind_label || '')}</td><td>${u.state === 'ok' ? '通过' : `<span class="dmErr">${esc(u.error || u.state || '')}</span>`}</td></tr>`).join('')
+      || '<tr><td colspan="3" class="dmMute">还没有上传过数据</td></tr>';
+    dmUps.querySelectorAll('a[data-i]').forEach(a => a.onclick = e => { e.preventDefault(); dmShowUp(j.uploads[+a.dataset.i]); });
+  } catch (e) { }
+}
+const DM_CAT = { rain: '降雨', depth: '水深与淹没', vel: '流速', hazard: '危险性等级（仅含危险性 H）', doc: '说明' };
+async function dmRuns() {
+  try {
+    const j = await scApi('/api/dm/results');
+    dmRun.innerHTML = j.runs.map(r => `<option value="${esc(r.run)}">${esc(r.type)}　${esc(r.name)}　${esc(String(r.time).slice(0, 16))}</option>`).join('') || '<option value="">暂无结果</option>';
+    if (DM.run && j.runs.some(r => r.run === DM.run)) dmRun.value = DM.run;
+    dmFilesLoad();
+  } catch (e) { }
+}
+dmRun.onchange = () => { DM.run = dmRun.value; dmFilesLoad(); };
+async function dmFilesLoad() {
+  const r = dmRun.value; dmZip.href = r ? dmU('zip', { run: r }) : '#';
+  if (!r) { dmFiles.innerHTML = ''; return; }
+  try {
+    const j = await scApi('/api/dm/files?run=' + encodeURIComponent(r)); let cat = '', h = '';
+    j.files.forEach(f => {
+      if (f.cat !== cat) { cat = f.cat; h += `<tr class="cat"><td colspan="3">${DM_CAT[cat] || cat}</td></tr>`; }
+      h += `<tr><td style="width:46%">${esc(f.label)}${f.unit && f.unit !== '—' ? `（${esc(f.unit)}）` : ''}</td><td style="width:18%">${dmSize(f.size)}</td>`
+        + `<td><a href="${dmU('file', { run: r, f: f.key })}" title="${esc(f.key)}">下载</a></td></tr>`;
+    });
+    dmFiles.innerHTML = h || '<tr><td class="dmMute">该场次没有可下载的文件</td></tr>';
+  } catch (e) { dmFiles.innerHTML = `<tr><td class="dmErr">${esc(e.message)}</td></tr>`; }
+}
 tdtShow.onchange = () => { tdtKey.type = tdtShow.checked ? 'text' : 'password'; };
 tdtSave.onclick = () => {
   const tk = tdtKey.value.trim();
