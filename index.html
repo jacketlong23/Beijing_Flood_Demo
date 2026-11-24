@@ -438,6 +438,9 @@
         <div class="row lyOp" id="cDemOpW">透明度 <input type="range" id="cDemOp" min="0" max="1" step="0.05" value="0.6"></div>
         <label class="row"><input type="checkbox" id="cBas">分水岭与河网</label>
         <div class="legend" id="cBasLeg"></div>
+        <label class="row"><input type="checkbox" id="cHist">历史预报图雨区</label>
+        <div id="cHistW" style="display:none"><select id="cHistSel" style="width:100%"></select>
+          <div class="row lyOp">透明度 <input type="range" id="cHistOp" min="0" max="1" step="0.05" value="0.75"></div><div class="nc-note" id="cHistMsg"></div></div>
       </details>
       <div id="afAlerts" class="fo"></div>
       <div class="row fo pro" style="margin-top:8px;gap:6px"><span style="color:#888;font-size:13px">历史起报</span><select id="afRun" style="flex:1"></select></div>
@@ -543,7 +546,7 @@
           <div class="row" style="margin-top:4px;gap:4px"><input id="cwUrl" style="flex:1;min-width:100px" placeholder="更早的预警：粘贴详情页链接或编号"><button class="btn" id="cwGet">读取</button></div>
           <div id="cwSel"></div>
         </div>
-        <div class="nc-note keep manNote" style="margin-top:6px">在地图上点击添加雨团（可拖动），设定总雨量、半径和历时后运行洪涝模型。<b style="color:#c0392b" id="scWarn">结果是假设情景，不是预报。</b> <a href="#" id="scHelp" style="white-space:nowrap">怎么设置？</a></div>
+        <div class="nc-note keep manNote" style="margin-top:6px">在地图右上角展开“手绘雨团”，选择圆形或任意多边形，再设置雨量和历时。<b style="color:#c0392b" id="scWarn">结果是假设情景，不是预报。</b> <a href="#" id="scHelp" style="white-space:nowrap">怎么设置？</a></div>
         <details class="nc-note" style="margin-top:4px"><summary>说明</summary>半径处约为中心的 10%，圈外基本无雨；地图细线为等雨量线 mm。按雨型分配到逐小时，再用洪涝模型（全市 100 m）计算。默认雨型取自北京市地方标准 DB11/T 969—2016，面向城镇建设区，点雨量未做面积折减。</details>
         <div style="margin-top:0;font-size:13px"><b style="color:#c0392b" id="scWarn2"></b></div>
         <div class="seg" id="scMode" style="margin-top:6px"><button data-m="manual" class="on">手动雨团（假设情景）</button><button data-m="synth">按气象预报合成</button><button data-m="obs">实况降雨</button><button data-m="image">中央气象台预报图</button></div>
@@ -589,6 +592,7 @@
         <details id="imBox" class="imBox" open><summary>预报图</summary>
           <div class="row" style="margin-top:4px;gap:4px"><select id="imProd" style="flex:1"></select><button class="btn" id="imFetch">获取最新</button><label class="btn" style="cursor:pointer">本机图片<input type="file" id="imFile" accept="image/*" hidden></label></div>
           <div class="row" style="margin-top:4px"><select id="imList" style="flex:1;min-width:0"></select></div>
+          <div class="row" id="imArchRow" style="margin-top:4px;gap:4px;display:none">历史档案 <input type="date" id="imArchDay"><button class="btn" id="imArchGo">读取</button></div>
           <div id="imMeta" class="nc-note keep"></div>
           <div class="row" style="margin-top:4px">有效时段 <input type="datetime-local" id="imStart" step="3600" style="width:170px"> 起 <input type="number" id="imHours" min="1" max="72" value="24"> h</div>
           <div class="row" style="margin-top:4px;gap:6px"><button class="btn" id="imReg">配准</button><label class="row" style="gap:4px"><input type="checkbox" id="imShow" checked>叠加</label><select id="imOvMode"><option value="rain" selected>识别出的雨色</option><option value="raw">原图（核对配准）</option></select><input type="range" id="imOp" min="0" max="1" step="0.05" value="0.7" style="flex:1"></div>
@@ -597,7 +601,7 @@
           <div class="row" style="margin-top:4px;gap:6px">雨量取值 <select id="imVal"><option value="lower">区间下限</option><option value="mid" selected>区间中值</option><option value="upper">区间上限</option></select><button class="btn pri" id="imGo">识别雨区</button></div>
           <div id="imOut" class="nc-note keep"></div>
         </details>
-        <div class="row manOnly" style="margin-top:6px"><button class="btn" id="scPick">在地图上添加雨团</button><button class="btn" id="scPoly" title="在地图上逐点单击画出雨区边界，双击或按 Enter 完成；区内为设定雨量，区外在“边缘”宽度内逐渐减小">手绘雨区</button><button class="btn" id="scClr">清空</button></div>
+        <div class="row manOnly" style="margin-top:6px"><button class="btn" id="scClr">清空</button></div>
         <div id="scPolyTip" class="nc-note keep" style="display:none;margin-top:2px"></div>
         <table id="scTab" style="margin-top:4px"><thead><tr><th>雨团 / 雨区</th><th class="num">总雨量 mm</th><th class="num" title="圆形雨团：半径（该处为中心的 10%）；雨区：边缘过渡宽度（该处为区内的 10%）">半径 / 边缘 km</th><th class="num" title="相对情景开始时刻">开始 h</th><th title="DB11/T 969—2016 3.2.2 条">分区</th><th></th></tr></thead><tbody></tbody></table>
         <div class="row manOnly" style="margin-top:6px">降雨历时 <input type="number" id="scDur" min="1" max="72" value="6"> h</div>
@@ -662,15 +666,20 @@ function cbSet(key, it) { if (it) CB.items[key] = it; else delete CB.items[key];
 function cbDraw() {
   if (!CB.el) return;
   const W = 32, fmt = v => (+v >= 1000 ? (+v).toFixed(0) : String(+(+v).toFixed(2)));
-  CB.el.innerHTML = ['result', 'hist', 'rain', 'sc', 'im', 'dem'].filter(k => CB.items[k]).map(k => { const it = CB.items[k];
+  CB.el.innerHTML = ['result', 'hist', 'rain', 'sc', 'im', 'dem', 'basin'].filter(k => CB.items[k]).map(k => { const it = CB.items[k];
     let bar, lab;
+    // 特殊地类和线状要素与数值色带共用地图左下角。
+    const symbols = (it.symbols || []).map(([color, label, style]) =>
+      `<div><i style="display:inline-block;width:16px;height:${style ? 0 : 8}px;${style ? 'border-top:' + style + ' ' + color : 'background:' + color};margin-right:4px"></i>${esc(label)}</div>`).join('');
+    if (!it.cats && !it.grad && !it.steps) return `<div class="cbI"><div class="cbT">${esc(it.t)}</div>${symbols}</div>`;
     if (it.cats) { bar = it.cats.map(([c]) => `<i style="width:${W}px;background:${c}"></i>`).join(''); lab = it.cats.map(([, t]) => `<span style="width:${W}px;transform:none;text-align:center">${t}</span>`).join(''); }
     else if (it.grad) { bar = `<i style="width:${W * 5}px;background:linear-gradient(90deg,${it.grad.map(([, c]) => c).join(',')})"></i>`;
       lab = `<span style="width:${W * 5}px;transform:none;display:flex;justify-content:space-between"><b style="font-weight:normal">${fmt(it.grad[0][0])}</b><b style="font-weight:normal">${fmt(it.grad.at(-1)[0])}</b></span>`; }
     else { bar = it.steps.map(([, c]) => `<i style="width:${W}px;background:${c}"></i>`).join(''); lab = it.steps.map(([lo]) => `<span style="width:${W}px">${fmt(lo)}</span>`).join(''); }
-    return `<div class="cbI"><div class="cbT">${esc(it.t)}${it.u ? `（${esc(it.u)}）` : ''}</div><div class="cbB">${bar}</div><div class="cbL">${lab}</div></div>`; }).join('');
+    return `<div class="cbI"><div class="cbT">${esc(it.t)}${it.u ? `（${esc(it.u)}）` : ''}</div><div class="cbB">${bar}</div><div class="cbL">${lab}</div>${symbols}</div>`; }).join('');
 }
-const CB_RISK = () => ({ t: '危险性', u: '级', cats: [1, 2, 3, 4, 5].map(k => [RISK_COLORS[k], k]) });
+const CB_PIT = color => [color, '闭洼（地形异常、矿坑等）'];
+const CB_RISK = (water = '#a6cee3', pit = '#3a3a3a') => ({ t: '危险性', u: '级', symbols: [[water, '水域（水库、河湖）'], CB_PIT(pit)], cats: [1, 2, 3, 4, 5].map(k => [RISK_COLORS[k], k]) });
 const CB_DEM = [[0, '#acd0a5'], [50, '#c8deaa'], [200, '#e9deaa'], [500, '#d6ba8c'], [1000, '#b69676'], [1500, '#cdc3b9'], [2300, '#f5f5f5']];
 const KINDS = [['hmax','水深'],['vmax','流速'],['hv','h·v'],['risk_opt','风险等级'],['rain','累计降雨'],['cuminf','累计下渗']];
 const SHARED = ['rain', 'cuminf'];   // 与情景无关的图层
@@ -947,6 +956,7 @@ function render() {
   if (tab === 'opinion') {                               // 舆情标签：时间轴淹没范围
     overlay = TL.arr ? L.imageOverlay(TL.url || BLANK, D.tflood.bounds, { opacity: +opacity.value, className: 'pix' }).addTo(map) : null;
     if (overlay) applyClip(D.tflood.bounds);
+    if (overlay) cbSet('hist', { t: '淹没时间', symbols: [[TL_NEW_C, `近 ${TL_NEW} h 新增淹没`], [TL_OLD_C, '更早已淹没']] });
     tlDraw(); renderPoints(); renderOpinions(); return;
   }
   const def = D.layers.find(l => l.id === (isNc() ? kind : lid(scen, kind)));
@@ -955,23 +965,13 @@ function render() {
   applyClip(def.bounds);
   ftDraw();
   cbSet('hist', def.ramp ? { t: def.label, u: def.unit, grad: def.colors.map((c, i, a) => [def.ramp[0] + (def.ramp[1] - def.ramp[0]) * i / (a.length - 1), c]) }
-    : def.cats ? { t: def.label, cats: def.cats.map(([, t, c]) => [c, t]) } : kind.startsWith('risk') ? CB_RISK()
-    : { t: useFt ? '水深 h（该时刻）' : def.label, u: def.unit, steps: def.legend });
-  if (def.ramp) {
-    legend.innerHTML = `<div><b>${def.label}</b>&nbsp;(${def.unit})</div><div class="ramp" style="background:linear-gradient(90deg,${def.colors.join(',')})"></div>
-      <div class="row" style="justify-content:space-between"><span>${def.ramp[0]}</span><span>${def.ramp[1]}</span></div>`;
-  } else if (def.cats) {
-    legend.innerHTML = `<div><b>${def.label}</b></div>` + def.cats.map(([, t, c]) => `<div><i style="background:${c}"></i>${t}</div>`).join('');
-  } else if (kind.startsWith('risk')) {
+    : def.cats ? { t: def.label, cats: def.cats.map(([, t, c]) => [c, t]) } : kind.startsWith('risk') ? CB_RISK(D.water_color, D.pit_color)
+    : { t: useFt ? '水深 h（该时刻）' : def.label, u: def.unit, steps: def.legend, symbols: [CB_PIT(D.pit_color)] });
+  legend.innerHTML = '';
+  if (kind.startsWith('risk') && !def.cats && !def.ramp) {
     const km = (curDist && def.km2_by && def.km2_by[curDist]) || def.km2 || {};
-    legend.innerHTML = `<div class="row"><b>${def.label}</b><span class="km2">${esc(curDist || (D.rain ? D.rain.area : ''))} km²</span></div>` + def.legend
-      .filter(([k]) => k > 0)
-      .map(([k, c]) => `<div><i style="background:${c}"></i>${k} 级<span class="km2">${km[k] != null ? km[k].toFixed(1) : ''}</span></div>`).join('') +
-      `<div><i style="background:${D.water_color}"></i>水域（水库、河湖）</div>` + pitLegend();
-  } else {
-    const L2 = def.legend;
-    legend.innerHTML = `<div><b>${useFt ? '水深 h（该时刻）' : def.label}</b>&nbsp;(${def.unit})</div>` + L2.map(([lo, c], i) =>
-      `<div><i style="background:${c}"></i>${i + 1 < L2.length ? `${lo} – ${L2[i + 1][0]}` : `≥ ${lo}`}</div>`).join('') + pitLegend();
+    legend.innerHTML = `<div><b>${esc(curDist || (D.rain ? D.rain.area : ''))} 分级面积（km²）</b></div>`
+      + def.legend.filter(([k]) => k > 0).map(([k]) => `<div>${k} 级<span class="km2">${km[k] != null ? km[k].toFixed(1) : ''}</span></div>`).join('');
   }
   vecApply(useFt);
   renderPoints(); renderOpinions();
@@ -1034,7 +1034,6 @@ function renderNowcast() {
   });
   return true;
 }
-function pitLegend() { return `<div><i style="background:${D.pit_color}"></i>闭洼（地形异常、矿坑等）</div>`; }
 
 // ---------- 舆情时间轴：截至 t 曾经淹没（≥ 0.15 m）的范围 + 截至 t 已发布的报道 ----------
 // tflood = 首次淹没时刻（模拟开始后小时数，prepare_timeline.py），不是 t 时刻的瞬时水面；不含河道、水域、闭洼
@@ -1050,7 +1049,7 @@ function tlInit() {
   tlSec.hidden = !TL.arr;
   if (!TL.arr) return;
   tlRange.max = tlN(); if (TL.t == null) TL.t = tlN(); tlRange.value = TL.t;
-  tlLegend.innerHTML = `<div><i style="background:${TL_NEW_C}"></i>近 ${TL_NEW} h 新增淹没</div><div><i style="background:${TL_OLD_C}"></i>更早已淹没</div>` +
+  tlLegend.innerHTML =
     `<div><i class="opIcon" style="display:inline-block;width:10px;height:10px;transform:rotate(45deg);border:1px solid #fff"></i>报道（实心：报道时周边已模拟淹没）</div>`;
 }
 function tlCursor() {
@@ -1222,6 +1221,7 @@ ptCtl.onAdd = () => {
   const d = L.DomUtil.create('div', 'ptCtl leaflet-bar');
   d.innerHTML = `<label><input type="checkbox" id="ptChk"${ptShow ? ' checked' : ''}>文物点位</label>`
     + `<label id="vecGlbRow" title="把当前图层显示为矢量面"><input type="checkbox" id="vecGlb">矢量显示<span id="vecKindTxt" style="color:#666"></span></label>`
+    + `<details id="rainDrawTools"${ENCRYPTED ? ' hidden' : ''}><summary>手绘雨团</summary><div class="seg"><button id="scPick" type="button">圆形</button><button id="scPoly" type="button">任意多边形</button></div></details>`
     + `<div class="seg uiMode" style="margin-top:4px;font-size:12px" title="简洁版隐藏说明小字和高级参数"><button data-m="simple">简洁</button><button data-m="pro">专业</button></div>`;
   d.querySelector('.uiMode').onclick = e => { const m = e.target.dataset.m; if (m) uiSet(m); };
   L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
@@ -1868,7 +1868,7 @@ const AF_STALE_H = 7;                                   // 每 6 h 一次起报�
 // ---------- 2026-11-21 结果层 / 原因层：结果（水深、危险性）默认显示；降雨、DEM 阴影地形、分水岭与河网在原因层按需打开，各层单独透明度 ----------
 afResOp.oninput = () => { AF.ov && AF.ov.setOpacity(+afResOp.value); if (isLive()) vecOp(+afResOp.value); };
 cRainOp.oninput = () => AF.rov && AF.rov.setOpacity(+cRainOp.value);
-cRain.onchange = () => { AF.rain = cRain.checked; afDraw(); };
+cRain.onchange = () => { AF.rain = cRain.checked; if (cRain.checked && window.cHist && cHist.checked) { cHist.checked = false; histSync(); } afDraw(); };
 (() => { const c = L.control({ position: 'bottomleft' }); c.onAdd = () => { CB.el = L.DomUtil.create('div', 'cbar'); L.DomEvent.disableClickPropagation(CB.el); return CB.el; }; c.addTo(map); cbDraw(); })();
 map.createPane('terrShade').style.zIndex = 250;
 map.createPane('vecPane').style.zIndex = 400;                  // 矢量面（历史 / 预报共用），透明度随当前页滑条
@@ -1882,6 +1882,7 @@ function terrLoad() {
 }
 async function terrSync() {
   cDemOpW.style.display = cDem.checked ? '' : 'none'; cbSet('dem', cDem.checked ? { t: '地面高程', u: 'm', grad: CB_DEM } : null);
+  if (!cBas.checked) cbSet('basin', null);
   if (!cDem.checked && !cBas.checked) { TR.shade && TR.shade.remove(); TR.lines && TR.lines.remove(); cBasLeg.innerHTML = ''; return; }
   let T; try { T = await terrLoad(); } catch (e) { cBasLeg.innerHTML = `<div class="nc-note" style="color:#c0392b">${esc(e.message)}</div>`; return; }
   if (!TR.shade) TR.shade = L.imageOverlay(T.shade.png, T.shade.bounds, { pane: 'terrShade', interactive: false });
@@ -1893,11 +1894,39 @@ async function terrSync() {
       L.geoJSON(T.basins5, { pane: 'terrLines', interactive: false, style: { color: '#b71c1c', weight: 2.6, opacity: .9 } })]);
   }
   cBas.checked ? TR.lines.addTo(map) : TR.lines.remove();
-  cBasLeg.innerHTML = cBas.checked ? '<div><i style="background:#b71c1c;height:3px"></i>大流域分水岭</div><div><i style="background:#c62828;height:1px"></i>子流域分水岭</div><div><i style="background:#1565c0;height:2px"></i>河流</div>' : '';
+  cBasLeg.innerHTML = '';
+  cbSet('basin', cBas.checked ? { t: '分水岭与河网', symbols: [['#b71c1c', '大流域分水岭', '3px solid'], ['#c62828', '子流域分水岭', '1px dashed'], ['#1565c0', '河流', '2px solid']] } : null);
 }
 [cDem, cBas].forEach(e => e.onchange = terrSync);
 cDemOp.oninput = () => TR.shade && TR.shade.setOpacity(+cDemOp.value);
 cDemOpW.style.display = 'none';
+// 2026-11-23：历史预报图雨区——中央气象台 24 h 降水量预报图里北京有雨的重点图，识别结果预先算好（select_beijing_rain.py → layers/cma_hist.js + cma_hist/*.png）
+map.createPane('histRain').style.zIndex = 320;
+const HR = { ov: null, loading: null };
+function histLoad() {
+  if (window.CMA_HIST) return Promise.resolve(window.CMA_HIST);
+  return HR.loading || (HR.loading = new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'layers/cma_hist.js?t=' + Date.now();
+    s.onload = () => window.CMA_HIST ? ok(window.CMA_HIST) : no(new Error('数据为空')); s.onerror = () => { HR.loading = null; no(new Error('没有 layers/cma_hist.js，请运行 select_beijing_rain.py')); }; document.head.appendChild(s); }));
+}
+async function histSync() {
+  cHistW.style.display = cHist.checked ? '' : 'none'; HR.ov && HR.ov.remove(); HR.ov = null; cbSet('hist', null);
+  if (!cHist.checked) return;
+  let H; try { H = await histLoad(); } catch (e) { cHistMsg.innerHTML = `<span style="color:#c0392b">${esc(e.message)}</span>`; return; }
+  if (!cHistSel.options.length) {
+    const by = {}; H.items.forEach((it, i) => (by[it.start.slice(0, 4)] ||= []).push([it, i]));
+    cHistSel.innerHTML = Object.keys(by).sort().map(y => `<optgroup label="${y}">` + by[y].map(([it, i]) =>
+      `<option value="${i}">${it.start.slice(5, 10)} 08 时起 · 第 ${it.lead} 天 · 北京均 ${Math.round(it.mean)} mm</option>`).join('') + '</optgroup>').join('');
+    const k = H.items.reduce((b, it, i) => it.mean > H.items[b].mean ? i : b, 0); cHistSel.value = k;
+  }
+  const it = H.items[+cHistSel.value]; if (!it) return;
+  HR.ov = L.imageOverlay(it.png + '?v=' + encodeURIComponent(H.made || ''), H.bounds, { pane: 'histRain', opacity: +cHistOp.value, className: 'pix', interactive: false }).addTo(map);
+  cHistMsg.textContent = `${it.start} — ${it.end}（${it.issue} 发布）· 北京有雨 ${Math.round(it.frac * 100)}%，最高 ${it.max} mm`;
+  cHistSel.title = it.caption + '\n' + it.how;
+  cbSet('hist', { t: '预报图雨区（24 h）', u: 'mm', steps: H.legend });
+}
+cHist.onchange = () => { if (cHist.checked && cRain.checked) { cRain.checked = false; cRain.onchange(); } histSync(); };   // 两种雨量图不叠在一起
+cHistSel.onchange = histSync;
+cHistOp.oninput = () => HR.ov && HR.ov.setOpacity(+cHistOp.value);
 // 测试数据（publish_forecast.py --test 写的 forecast/test.js）并入列表并标红；网页上“清除测试数据”按批次（generated）隐藏，记在本机
 const AF_HIDE_KEY = 'flood_viewer_hide_test_fc';
 async function afFetch() {
@@ -1940,7 +1969,6 @@ function afNext() {                                     // 下次计划运行时
   const nx = sch.map(([h, m]) => { const d = new Date(now); d.setHours(h, m, 0, 0); if (d <= now) d.setDate(d.getDate() + 1); return d; }).sort((a, b) => a - b)[0];
   return `${String(nx.getHours()).padStart(2, '0')}:${String(nx.getMinutes()).padStart(2, '0')}`;
 }
-const afSteps = (L2, unit) => L2.map(([lo, c], i) => `<div><i style="background:${c}"></i>${i + 1 < L2.length ? `${lo} – ${L2[i + 1][0]}` : `≥ ${lo}`} ${unit}</div>`).join('');
 function afDraw() { afDraw0(); if (isLive() && D) renderPoints(); }
 // 雨源类型：实况数据模拟（历史场次 CLDAS 观测）/ 预报数据模拟（数值预报 ECMWF·GFS，或按气象预报信息合成的雨团）/ 假设情景（手动雨团）
 const scSynth = r => !!(r && r.scenario && r.scenario.source && r.scenario.source.kind === 'synth');
@@ -2057,19 +2085,18 @@ function afDraw0() {
     boundary.getLayers().forEach(l => { const v = dv[l.feature.properties.name]; if (v >= 0.1) L.marker(l.getBounds().getCenter(), { interactive: false, icon: L.divIcon({ className: '', iconSize: null,
       html: `<div style="transform:translate(-50%,-50%);white-space:nowrap;font:bold 12px sans-serif;color:${v >= 50 ? '#c00' : '#1f5fbf'};background:rgba(255,255,255,.88);border-radius:3px;padding:1px 4px">区均 ${v.toFixed(v < 10 ? 1 : 0)} mm</div>` }) }).addTo(afLayer); });
   }
-  const pit = `<div><i style="background:#3a3a3a"></i>闭洼（地形异常、矿坑等）</div>`;
-  afRainLeg.innerHTML = !AF.rain ? '' : pvHide ? '<div style="font-size:13px;color:#b35c00;margin-top:4px">右栏“降雨量预览”正显示在地图上，这里的雨量图暂时隐藏；点预览的“✓ 地图上显示中”关闭预览即可恢复</div>'
-    : rly ? `<div style="font-size:13px;margin-top:4px">${AF.day ? `第 ${AF.day} 天 24 h` : `${r.hours || 72} h`} 累计雨量</div>` + afSteps(rainLyStep(rly), 'mm') : '';
-  cbSet('result', !isLive() ? null : AF.ly === 'hgnd' && ly ? { t: '最大水深', u: 'm', steps: AF_H } : AF.ly === 'risk' && ly ? CB_RISK() : null);
+  afRainLeg.innerHTML = pvHide ? '<div style="font-size:13px;color:#b35c00;margin-top:4px">右栏“降雨量预览”正显示在地图上，这里的雨量图暂时隐藏；点预览的“✓ 地图上显示中”关闭预览即可恢复</div>'
+    : '';
+  cbSet('result', !isLive() || useVec ? null : AF.ly === 'hgnd' && ly ? { t: '最大水深', u: 'm', steps: AF_H, symbols: [CB_PIT('#3a3a3a')] } : AF.ly === 'risk' && ly ? CB_RISK() : null);
   cbSet('rain', isLive() && AF.rain && rly && !pvHide ? { t: `${AF.day ? `第 ${AF.day} 天 24 h` : `${r.hours || 72} h`} 累计雨量`, u: 'mm', steps: rainLyStep(rly) } : null);
-  afLegend.innerHTML = AF.ly === 'hgnd' ? '<div style="font-size:13px;margin-top:4px">最大水深（m）</div>' + afSteps(AF_H, 'm') + pit
-    : AF.ly === 'risk' ? [1, 2, 3, 4, 5].map(k => `<div><i style="background:${RISK_COLORS[k]}"></i>${k} 级<span class="km2">${(r.risk_km2[k] || 0).toFixed(0)} km²</span></div>`).join('')
-      + `<div><i style="background:#a6cee3"></i>水域（水库、河湖）</div>` + pit : '';
+  afLegend.innerHTML = AF.ly === 'risk' ? [1, 2, 3, 4, 5].map(k =>
+    `<div>${k} 级<span class="km2">${(r.risk_km2[k] || 0).toFixed(0)} km²</span></div>`).join('') : '';
   if (useVec && !pvHide) {
     afLegend.innerHTML = `<div class="nc-note">加载${VEC_KINDS[VEC.kind]}矢量…</div>`;
     vecGet(ve.key, ve.js).then(b => {
       if (AF.draw !== draw) return;                      // 切换起报或图层后，丢弃旧请求的显示结果
       AF.vec = b; vecOp(+afResOp.value); b.layer.addTo(afLayer); b.mk.addTo(afLayer);
+      if (isLive()) cbSet('result', vecColorbar(b.V));
       afLegend.innerHTML = vecInfoHtml(b)
         + (b.V.kind === 'rain' ? '' : '<div class="nc-note">以上按面内 / 50 m 内判定，仅用于显示与名单；与下方危险性 / 河道漫岸的超阈口径不同。</div>');
       vecBind(afLegend);
@@ -2424,14 +2451,25 @@ function scSync(lv) {                                     // applyCtx 调用：�
   if (!map.hasLayer(scLayer)) cbSet('sc', null); else if (SC.rmOv && !CB.items.sc) scPreview();
   if (typeof imDrawOv === 'function' && IM && IM.img) imDrawOv();   // hideCells：一键隐藏雨团
   if (was !== map.hasLayer(scLayer) && lv && window.FLOOD_FC && typeof afDraw0 === 'function') setTimeout(afDraw0, 0);   // 草稿雨团与降雨量预览只在右栏展开时显示，收起后不与左侧选中的预报 / 情景结果混在一起
+  if (!on || SC.fold) { scPolyEnd(false); scSetPick(false); }
   if (on && !SC.timer) { scPing(); SC.timer = setInterval(scPing, 10e3); }
   if (!on && SC.timer) { clearInterval(SC.timer); SC.timer = null; scSetPick(false); }
 }
+// 从地图工具打开情景编辑区，共用原有雨团列表和模型输入。
+function scOpenDrawing() {
+  if (adding) setAdding(false);
+  if (IM.reg) imRegEnd(false);
+  setTab('forecast');
+  SC.fold = false;
+  if (SC.hideCells) scHide.click();
+  scSync(isLive());
+  if (SC.mode !== 'manual' && SC.mode !== 'image') { scSetMode('manual'); scSave(); }
+}
 function scSetPick(on) {
-  SC.pick = on; scPick.classList.toggle('on', on); scPick.textContent = on ? '点击地图添加（Esc 结束）' : '在地图上添加雨团';
+  SC.pick = on; scPick.classList.toggle('on', on); scPick.textContent = on ? '结束圆形绘制' : '圆形';
   map.getContainer().classList.toggle('adding', on || adding);
 }
-scPick.onclick = () => { scPolyEnd(false); scSetPick(!SC.pick); };
+scPick.onclick = () => { scOpenDrawing(); scPolyEnd(false); scSetPick(!SC.pick); };
 // 2026-11-21：手绘雨区——逐点单击画边界，双击 / Enter 完成，Esc 放弃；区内为设定雨量（scenario_rain.py poly）
 SC.poly = null; SC.polyLy = L.layerGroup();
 function scPolyStart() {
@@ -2453,7 +2491,7 @@ function scPolyAdd(ll) {
 function scPolyEnd(keep) {
   if (!SC.poly) return;
   const v = SC.poly; SC.poly = null; SC.polyLy.clearLayers(); SC.polyLy.remove(); map.doubleClickZoom.enable();
-  scPoly.classList.remove('on'); scPoly.textContent = '手绘雨区'; map.getContainer().classList.toggle('adding', SC.pick || adding); scPolyShow();
+  scPoly.classList.remove('on'); scPoly.textContent = '任意多边形'; map.getContainer().classList.toggle('adding', SC.pick || adding); scPolyShow();
   if (!keep) return;
   if (v.length < 3) return alert('雨区至少要 3 个顶点');
   if (SC.centers.length >= 24) return alert('雨团和雨区合计最多 24 个');
@@ -2461,7 +2499,10 @@ function scPolyEnd(keep) {
   SC.centers.push({ poly: v.map(([a, b]) => [+a.toFixed(5), +b.toFixed(5)]), lat: la, lng: lo, mm: 100, r_km: 3, offset_h: 0, zone: scZoneDefault(la, lo) }); scDraw();
 }
 const scPolyCen = v => [v.reduce((a, p) => a + p[0], 0) / v.length, v.reduce((a, p) => a + p[1], 0) / v.length];
-scPoly.onclick = () => SC.poly ? scPolyEnd(true) : scPolyStart();
+scPoly.onclick = () => { scOpenDrawing(); if (SC.poly) scPolyEnd(true); else scPolyStart(); };
+rainDrawTools.ontoggle = () => {
+  if (!rainDrawTools.open) { scSetPick(false); scPolyEnd(false); }
+};
 map.on('dblclick', () => { if (SC.poly) scPolyEnd(true); });
 document.addEventListener('keydown', e => {
   if (!SC.poly || /INPUT|TEXTAREA|SELECT/.test((e.target || {}).tagName || '')) return;
@@ -2586,12 +2627,16 @@ function scBgRuns(runs) {                                 // /api/ping 给出的
 // ---------- 2026-11-21 预报图生成雨区：取中央气象台降水预报图（本机服务转取并归档）或本机图片 → 控制点配准（局部仿射）→ 按图例颜色分级 →
 //            各级雨区多边形（嵌套，逐格取最大）进入雨团编辑表，可改边界、雨量和时段后推演。色阶只给区间，雨量按所选下限 / 中值 / 上限，记入情景来源。
 var IM = null;
-const IM_CLS = [                                           // 中央气象台降水量预报图图例（24 h）：颜色、区间 mm
-  { c: [[166, 242, 143]], lo: 0.1, hi: 10, t: '0–10 mm' }, { c: [[61, 186, 61]], lo: 10, hi: 25, t: '10–25 mm' }, { c: [[97, 184, 255]], lo: 25, hi: 50, t: '25–50 mm' },
+const IM_CLS = [                                           // 中央气象台降水量预报图图例（24 h）：颜色、区间 mm；2026-11-23 天气公报 / 转载图的 10–25 mm 是 (61,168,0)，与产品图 (61,186,61) 差 64，两色都算
+  { c: [[166, 242, 143]], lo: 0.1, hi: 10, t: '0–10 mm' }, { c: [[61, 186, 61], [61, 168, 0]], lo: 10, hi: 25, t: '10–25 mm' }, { c: [[97, 184, 255]], lo: 25, hi: 50, t: '25–50 mm' },
   { c: [[0, 0, 254]], lo: 50, hi: 100, t: '50–100 mm' }, { c: [[250, 0, 250]], lo: 100, hi: 250, t: '100–250 mm' }, { c: [[128, 0, 64], [128, 0, 0]], lo: 250, hi: null, t: '≥250 mm' }];
 // 2026-11-21：图上不是雨的浅蓝（河流、湖泊、海岸）——与“25–50 mm”浅蓝只差约 60，旧阈值 70 会误判；离这些颜色更近的像素一律不算雨
 const IM_NOT = [[130, 219, 246], [144, 224, 248], [152, 224, 248], [176, 224, 240], [184, 224, 248], [200, 232, 248], [216, 232, 240], [224, 240, 248]];
 const IM_TOL = 45;                                          // 与图例色的距离上限（RGB 欧氏距离；JPEG 色块内实测偏差 < 10）
+// 2026-11-23 v2（与 select_beijing_rain.py 同步）：50–100 深蓝被 JPEG 压暗（如 (0,13,204)）时放宽到 80（须不到次近另一级的一半）；
+//   深海军蓝（“×”降水中心值符号压在深蓝块上）算深蓝；字和周围 2 像素内的白块一起挖掉按周围补；补缝至多 20 像素；
+//   各级掩膜高斯平滑 0.8 像素后双线性插值到 0.01° 网格（亚像素边界）；网格上小于 25 km² 的碎块并入周围
+const IM_TOL2 = 80, IM_AMB = 0.5, IM_TXT_R = 2, IM_FILL = 20, IM_SIG = 0.8, IM_MERGE_KM2 = 25;
 const IM_VAL = (k, v) => { const C = IM_CLS[k - 1]; if (v === 'lower') return Math.max(1, C.lo); if (v === 'upper') return C.hi || 400; return C.hi ? Math.max(1, Math.round((Math.max(C.lo, 0) + C.hi) / 2)) : 300; };
 const IM_BB = { w: 114.8, e: 118.2, s: 39.0, n: 41.6, d: 0.01 };    // 识别与叠加范围（北京 + 周边），0.01° 网格
 const IM_DEF = { 'nmc24|849x718': { A: { x: [14.0112, -2.2623, -924.9463], y: [-1.5696, -18.8642, 1215.168] }, how: '全国图默认参数（北京、天津、石家庄、呼和浩特、太原、济南 6 个城市点，残差 ≤ 1 像素）' } };
@@ -2603,10 +2648,20 @@ imShow.onchange = imDrawOv;
 async function imInit() {
   try { const j = await scApi('/api/cmamap/list');
     if (!imProd.options.length) imProd.innerHTML = Object.entries(j.products).map(([k, v]) => `<option value="${k}">${esc(v.name)}</option>`).join('');
-    IM.list = j.items; imListDraw();
+    IM.list = [...(IM.arch || []), ...j.items]; imListDraw();
+    if (j.archive) { imArchRow.style.display = ''; imArchDay.min = j.archive.first; imArchDay.max = j.archive.last; if (!imArchDay.value) imArchDay.value = j.archive.last; }
   } catch (e) { imMeta.textContent = '需要连接本机服务才能取官网图；也可以用“本机图片”'; }
 }
-const IM_PL = { nmc24: '第 1 天 24 h', nmc48: '第 2 天 24 h', nmc72: '第 3 天 24 h', hs1h: '华北 1 h' };
+const IM_PL = { nmc24: '第 1 天 24 h', nmc48: '第 2 天 24 h', nmc72: '第 3 天 24 h', hs1h: '华北 1 h', bul1: '公报 第 1 天', bul2: '公报 第 2 天', bul3: '公报 第 3 天',
+  arch1: '档案 第 1 天', arch2: '档案 第 2 天', arch3: '档案 第 3 天' };
+// 2026-11-23：2023—2025 历史档案（按发布日读取当日第 1、2、3 天图，可逐张识别后叠加）
+imArchGo.onclick = async () => {
+  if (!imArchDay.value) return;
+  try { const j = await scApi('/api/cmamap/archive?day=' + imArchDay.value);
+    if (!j.items.length) { imMeta.textContent = `${imArchDay.value} 档案里没有图`; return; }
+    IM.arch = j.items; IM.list = [...IM.arch, ...IM.list.filter(e => !e.id.startsWith('arch:'))]; imListDraw(); await imUse(IM.arch[0]);
+  } catch (e) { imMeta.innerHTML = `<span style="color:#c0392b">${esc(e.message)}</span>`; }
+};
 function imListDraw() {
   imList.innerHTML = '<option value="">— 已归档的预报图（' + IM.list.length + ' 张）—</option>' + IM.list.map(e => `<option value="${esc(e.id)}"${IM.item && IM.item.id === e.id ? ' selected' : ''}>${esc(IM_PL[e.product] || e.product)} · ${esc(e.valid_start ? `${e.valid_start.slice(5, 13)}时—${e.valid_stop.slice(8, 13)}时` : e.page_time || e.stamp || '')}${e.version > 1 ? ` · 第 ${e.version} 版` : ''} · 取于 ${esc(e.fetched.slice(5, 16))}</option>`).join('');
 }
@@ -2639,15 +2694,27 @@ function imUse(e) {
         + (e.page ? `<br><a href="${esc(e.page)}" target="_blank" rel="noopener">官网页面</a> · <a href="${esc(e.img_url)}" target="_blank" rel="noopener">原图</a>` : '')
         + '<br><b>有效时段请按图面标题核对</b>';
       imRegShow(); imDrawOv(); imOut.textContent = ''; ok();
+      if (!sv && SC.online) imAutoReg(e, im);
     };
     im.onerror = () => { imMeta.innerHTML = '<span style="color:#c0392b">图片读取失败（缺图），请重新获取</span>'; ok(); };
     im.src = e.src || `${SC_API}/api/cmamap/img?id=${encodeURIComponent(e.id)}`;
   });
 }
+async function imAutoReg(e, im) {                            // 2026-11-23：服务端按底图界线自动配准（cma_register.py）
+  IM.how = '自动配准中…'; imRegShow();
+  try {
+    let j;
+    if (e.src) { const b = await (await fetch(e.src)).blob(); const r = await fetch(`${SC_API}/api/cmamap/autoreg?day=${encodeURIComponent((imStart.value || '').slice(0, 10))}`, { method: 'POST', body: b, headers: { 'Content-Type': 'application/octet-stream' } }); j = await r.json(); if (j.error) throw new Error(j.error); }
+    else j = await scApi('/api/cmamap/autoreg?id=' + encodeURIComponent(e.id));
+    if (IM.img !== im) return;                                 // 期间换了图
+    IM.A = j.A || null; IM.how = j.how || ''; IM.G = null;
+  } catch (x) { if (IM.img === im) { IM.A = null; IM.how = ''; } }
+  imRegShow(); imDrawOv();
+}
 const imRegLoad = () => { try { return JSON.parse(localStorage.getItem(IM_KEY)) || {}; } catch (e) { return {}; } };
 const imP = (A, lng, lat) => [A.x[0] * lng + A.x[1] * lat + A.x[2], A.y[0] * lng + A.y[1] * lat + A.y[2]];   // 经纬度 → 图上像素
 function imRegShow() {
-  imRegInfo.innerHTML = !IM.img ? '' : IM.A ? `配准：${esc(IM.how)}` : '<span style="color:#b35c00">这张图还没有配准：点“配准”，在图上和地图上依次点同一地标，至少 3 对</span>';
+  imRegInfo.innerHTML = !IM.img ? '' : IM.A ? `配准：${esc(IM.how)}` : IM.how ? `<span style="color:#b35c00">${esc(IM.how)}</span>` : '<span style="color:#b35c00">这张图还没有配准：点“配准”，在图上和地图上依次点同一地标，至少 3 对</span>';
   imGo.disabled = !IM.A;
 }
 function imSample(lng, lat) {                              // 最近邻取色；图外返回 null
@@ -2658,9 +2725,12 @@ function imSample(lng, lat) {                              // 最近邻取色；
 function imPxClass(i, j) {                                  // 单个图像像素：0 白底，1–6 图例色，-1 其他
   const k = (j * IM.w + i) * 4, c = [IM.px[k], IM.px[k + 1], IM.px[k + 2]];
   if (c[0] > 232 && c[1] > 232 && c[2] > 232) return 0;
-  let best = -1, bd = IM_TOL;
-  IM_CLS.forEach((C, n) => C.c.forEach(q => { const d = Math.hypot(c[0] - q[0], c[1] - q[1], c[2] - q[2]); if (d < bd) { bd = d; best = n + 1; } }));
-  if (best > 0 && IM_NOT.some(q => Math.hypot(c[0] - q[0], c[1] - q[1], c[2] - q[2]) < bd)) return -1;   // 更像河流 / 海岸浅蓝
+  const dk = IM_CLS.map(C => Math.min(...C.c.map(q => Math.hypot(c[0] - q[0], c[1] - q[1], c[2] - q[2]))));
+  let n0 = 0; for (let n = 1; n < 6; n++) if (dk[n] < dk[n0]) n0 = n;
+  const bd = dk[n0], d2 = Math.min(...dk.filter((_, n) => n !== n0));
+  let best = bd < IM_TOL || (n0 === 3 && bd < IM_TOL2 && bd < IM_AMB * d2) ? n0 + 1 : -1;
+  if (best > 0 && IM_NOT.some(q => Math.hypot(c[0] - q[0], c[1] - q[1], c[2] - q[2]) < bd)) best = -1;   // 更像河流 / 海岸浅蓝
+  if (best < 0 && c[2] >= 45 && c[0] < 40 && c[1] < 60 && c[2] > 2 * Math.max(c[0], c[1]) + 30) return -3;   // 深海军蓝（“×”降水中心值符号）：imGlobal 里与深蓝相连的才算深蓝
   return best;
 }
 function imClass(c) {                                       // -2 图外，-1 无法判读（文字、界线、河流、雨夹雪 / 雪等），0 无雨（白底），1–6 图例分级
@@ -2674,14 +2744,13 @@ function imDrawOv() {
   cbSet('im', null);
   if (!IM.img || !IM.A || !imShow.checked || SC.mode !== 'image' || !map.hasLayer(scLayer)) return;   // 只在右栏打开、预报图方式下叠加
   // 2026-11-21：默认只画全图识别出的雨色（无雨就什么都不画）；原图（含地名文字、界线、河流）只在核对配准时叠加
-  const raw = imOvMode.value === 'raw'; if (!raw) imGlobal();
-  const B = IM_BB, f = 4, W = Math.round((B.e - B.w) / B.d * f / 2), H = Math.round((B.n - B.s) / B.d * f / 2), cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const raw = imOvMode.value === 'raw', gd = raw ? null : imGrid();
+  const B = IM_BB, W = raw ? Math.round((B.e - B.w) / B.d * 2) : gd.nx, H = raw ? Math.round((B.n - B.s) / B.d * 2) : gd.ny, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const cx = cv.getContext('2d'), od = cx.createImageData(W, H); let any = false;
   for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+    if (!raw) { const v = gd.v[j * W + i]; if (v > 0) { any = true; od.data.set([...IM_CLS[v - 1].c[0], 255], (j * W + i) * 4); } continue; }   // 识别结果：与“生成雨区”同一网格
     const c = imSample(B.w + (i + .5) * (B.e - B.w) / W, B.n - (j + .5) * (B.n - B.s) / H); if (!c) continue;
-    if (raw) { const wht = c[0] > 232 && c[1] > 232 && c[2] > 232; od.data.set([c[0], c[1], c[2], wht ? 0 : 255], (j * W + i) * 4); continue; }
-    const q = c[4] * IM.w + c[3]; let v = 0; for (let lv = Math.min(6, IM.G[q]); lv >= 1; lv--) if (IM.big[lv][q]) { v = lv; break; }
-    if (v) { any = true; od.data.set([...IM_CLS[v - 1].c[0], 255], (j * W + i) * 4); }
+    const wht = c[0] > 232 && c[1] > 232 && c[2] > 232; od.data.set([c[0], c[1], c[2], wht ? 0 : 255], (j * W + i) * 4);
   }
   if (!raw && !any) return;                                   // 无雨：不叠加、不出色带
   cbSet('im', { t: raw ? '预报原图图例（24 h）' : '预报图识别雨色（24 h）', u: 'mm', steps: IM_CLS.map(C => [C.lo, `rgb(${C.c[0].join(',')})`]) });
@@ -2737,17 +2806,43 @@ function imRegEnd(ok) {
   imRegShow(); imDrawOv();
 }
 // ---- 识别：0.01° 网格取色分级 → 无法判读的格按邻格众数补（文字、界线压住的地方）→ 各级（≥ k）掩膜描边成多边形
-// 2026-11-21：先全图识别、再裁剪到北京（用户要求）——全图逐像素按图例取色 → 成片才算（3×3 同类 ≥ 5）→ 只补细缝（文字笔画、界线，至多 3 像素）
+// 2026-11-21：先全图识别、再裁剪到北京（用户要求）——全图逐像素按图例取色 → 成片才算（3×3 同类 ≥ 5）→ 补缝（文字笔画、界线、JPEG 抹开的色带过渡；雨区里小块白字也算缝；2026-11-23 起至多 10 像素，v2 起 20 像素并挖掉字周围的白块）
 //   → 全图连通块小于约 15 km²（且不少于 4 像素）的零星色斑不算 → 再按 0.01° 网格裁到北京及周边。没有雨色的地方一律无雨，不按邻近颜色外推
 function imGlobal() {
   const key = JSON.stringify(IM.A); if (IM.G && IM.gKey === key) return;
   const W = IM.w, H = IM.h, N = W * H, P = new Int8Array(N), G0 = new Int8Array(N);
   for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) P[j * W + i] = imPxClass(i, j);
+  { // 深海军蓝块：与深蓝（4）像素相连的整块算深蓝（“×”压在深蓝块上），否则当符号（-1）按周围补
+    const seen = new Uint8Array(N), st = new Int32Array(N);
+    for (let s0 = 0; s0 < N; s0++) { if (P[s0] !== -3 || seen[s0]) continue;
+      const pts = []; let sp = 0, hit = false; st[sp++] = s0; seen[s0] = 1;
+      while (sp) { const q = st[--sp], qi = q % W, qj = (q - qi) / W; pts.push(q);
+        for (let b = Math.max(0, qj - 1); b <= Math.min(H - 1, qj + 1); b++) for (let a = Math.max(0, qi - 1); a <= Math.min(W - 1, qi + 1); a++) { const r = b * W + a; if (P[r] === 4) hit = true; if (P[r] === -3 && !seen[r]) { seen[r] = 1; st[sp++] = r; } } }
+      pts.forEach(q => { P[q] = hit ? 4 : -1; }); }
+  }
   for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) { const k = j * W + i, v = P[k]; if (v <= 0) { G0[k] = v; continue; }
     let n = 0; for (let b = Math.max(0, j - 1); b <= Math.min(H - 1, j + 1); b++) for (let a = Math.max(0, i - 1); a <= Math.min(W - 1, i + 1); a++) if (P[b * W + a] === v) n++;
     G0[k] = n >= 5 ? v : -1; }
+  const A = IM.A, det = Math.abs(A.x[0] * A.y[1] - A.x[1] * A.y[0]) || 1, kmPx = 111.32 * Math.cos(40 * Math.PI / 180) * 110.57 / det;
+  const minPx = Math.max(4, Math.ceil(15 / kmPx)), big = [null], stack = new Int32Array(N); let small = 0;
+  { // 2026-11-23 v2：去文字——字、界线、城市点（非图例色）周围 2 像素内的白块一起挖掉，按周围色块补，不算无雨
+    let near = new Uint8Array(N); for (let q = 0; q < N; q++) near[q] = P[q] === -1 ? 1 : 0;
+    for (let it = 0; it < IM_TXT_R; it++) { const nx = near.slice();
+      for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) { if (near[j * W + i]) continue;
+        for (let b = Math.max(0, j - 1); b <= Math.min(H - 1, j + 1) && !nx[j * W + i]; b++) for (let a = Math.max(0, i - 1); a <= Math.min(W - 1, i + 1); a++) if (near[b * W + a]) { nx[j * W + i] = 1; break; } }
+      near = nx; }
+    for (let q = 0; q < N; q++) if (G0[q] === 0 && near[q]) G0[q] = -1;
+  }
+  { // 2026-11-23：雨区里的小块白色（地名、数字的白字笔画）不算无雨，当作待补的缝（转载的 700 宽图上“北京”“250”等字会留白洞）
+    const lab = new Int32Array(N).fill(-1);
+    for (let s0 = 0; s0 < N; s0++) { if (G0[s0] !== 0 || lab[s0] >= 0) continue;
+      const pts = []; let sp = 0; stack[sp++] = s0; lab[s0] = s0;
+      while (sp) { const q = stack[--sp], qi = q % W, qj = (q - qi) / W; pts.push(q);
+        for (let b = Math.max(0, qj - 1); b <= Math.min(H - 1, qj + 1); b++) for (let a = Math.max(0, qi - 1); a <= Math.min(W - 1, qi + 1); a++) { const r = b * W + a; if (G0[r] === 0 && lab[r] < 0) { lab[r] = s0; stack[sp++] = r; } } }
+      if (pts.length < minPx) pts.forEach(q => { G0[q] = -1; }); }
+  }
   let G = G0.slice();
-  for (let it = 0; it < 3; it++) {                            // 补细缝：8 邻域已判读像素的众数，票数相同取较低一级（宁少勿多）
+  for (let it = 0; it < IM_FILL; it++) {                      // 补缝：8 邻域已判读像素的众数，票数相同取较低一级（宁少勿多）；至多 20 像素（“100”“北京”等字从两边往里补）
     const nx = G.slice(); let ch = 0;
     for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) { const k = j * W + i; if (G[k] !== -1) continue;
       const cnt = [0, 0, 0, 0, 0, 0, 0]; let any = false;
@@ -2755,8 +2850,6 @@ function imGlobal() {
       if (!any) continue; let bv = 0; for (let v = 1; v <= 6; v++) if (cnt[v] > cnt[bv]) bv = v; nx[k] = bv; ch++; }
     G = nx; if (!ch) break;
   }
-  const A = IM.A, det = Math.abs(A.x[0] * A.y[1] - A.x[1] * A.y[0]) || 1, kmPx = 111.32 * Math.cos(40 * Math.PI / 180) * 110.57 / det;
-  const minPx = Math.max(4, Math.ceil(15 / kmPx)), big = [null], stack = new Int32Array(N); let small = 0;
   for (let lv = 1; lv <= 6; lv++) {                           // 各级（≥ lv）全图连通块，够大的才算
     const lab = new Int32Array(N).fill(-1), m = new Uint8Array(N), sizes = [];
     for (let s0 = 0; s0 < N; s0++) { if (G[s0] < lv || lab[s0] >= 0) continue;
@@ -2767,18 +2860,57 @@ function imGlobal() {
     for (let q = 0; q < N; q++) if (lab[q] >= 0 && sizes[lab[q]] >= minPx) m[q] = 1;
     big.push(m);
   }
-  Object.assign(IM, { G0, G, big, gKey: key, kmPx, minPx, nSmall: small });
+  // 各级（≥ lv 且够大）掩膜高斯平滑（σ = 0.8 像素，半径 3，边缘取最近值），供亚像素取样
+  const R = 3, ker = []; for (let t = -R; t <= R; t++) ker.push(Math.exp(-t * t / (2 * IM_SIG * IM_SIG))); const ks = ker.reduce((a, b) => a + b, 0); ker.forEach((v, t) => { ker[t] = v / ks; });
+  const sm = [null];
+  for (let lv = 1; lv <= 6; lv++) {
+    const I = new Float32Array(N), T = new Float32Array(N), O = new Float32Array(N); let any = false;
+    for (let q = 0; q < N; q++) if (G[q] >= lv && big[lv][q]) { I[q] = 1; any = true; }
+    if (!any) { sm.push(null); continue; }
+    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) { let s = 0; for (let t = -R; t <= R; t++) s += ker[t + R] * I[j * W + Math.min(W - 1, Math.max(0, i + t))]; T[j * W + i] = s; }
+    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) { let s = 0; for (let t = -R; t <= R; t++) s += ker[t + R] * T[Math.min(H - 1, Math.max(0, j + t)) * W + i]; O[j * W + i] = s; }
+    sm.push(O);
+  }
+  Object.assign(IM, { G0, G, big, sm, gKey: key, kmPx, minPx, nSmall: small, grid: null });
+}
+function imLevelAt(lng, lat) {                              // 亚像素取级别：-2 图外，0 无雨，1–6（平滑掩膜双线性插值 ≥ 0.5）
+  const [x, y] = imP(IM.A, lng, lat), W = IM.w, H = IM.h;
+  if (x < -.5 || y < -.5 || x > W - .5 || y > H - .5) return -2;
+  const cx = Math.min(W - 1, Math.max(0, x)), cy = Math.min(H - 1, Math.max(0, y)), i0 = Math.min(W - 2, Math.floor(cx)), j0 = Math.min(H - 2, Math.floor(cy)), fx = cx - i0, fy = cy - j0;
+  let v = 0;
+  for (let lv = 1; lv <= 6; lv++) { const S = IM.sm[lv]; if (!S) break; const k = j0 * W + i0;
+    const s = S[k] * (1 - fx) * (1 - fy) + S[k + 1] * fx * (1 - fy) + S[k + W] * (1 - fx) * fy + S[k + W + 1] * fx * fy; if (s >= .5) v = lv; else break; }
+  return v;
+}
+function imMerge(v, nx, ny, ncell) {                         // 网格上合并碎块：从高到低，≥ lv 的小块降一级；< lv 的小空洞（不碰网格边、不挨图外）补成 lv
+  const N = nx * ny, lab = new Int32Array(N), st = new Int32Array(N);
+  const comps = f => { lab.fill(-1); const out = [];
+    for (let s0 = 0; s0 < N; s0++) { if (!f(s0) || lab[s0] >= 0) continue; const pts = [], id = out.length; let sp = 0, edge = false, out2 = false; st[sp++] = s0; lab[s0] = id;
+      while (sp) { const q = st[--sp], i = q % nx, j = (q - i) / nx; pts.push(q); if (i === 0 || j === 0 || i === nx - 1 || j === ny - 1) edge = true;
+        for (let b = Math.max(0, j - 1); b <= Math.min(ny - 1, j + 1); b++) for (let a = Math.max(0, i - 1); a <= Math.min(nx - 1, i + 1); a++) { const r = b * nx + a; if (v[r] === -2) out2 = true; if (f(r) && lab[r] < 0) { lab[r] = id; st[sp++] = r; } } }
+      out.push({ pts, edge, out2 }); }
+    return out; };
+  for (let lv = 6; lv >= 1; lv--) {
+    comps(q => v[q] >= lv).forEach(c => { if (c.pts.length < ncell) c.pts.forEach(q => { v[q] = lv - 1; }); });
+    comps(q => v[q] >= 0 && v[q] < lv).forEach(c => { if (c.pts.length < ncell && !c.edge && !c.out2) c.pts.forEach(q => { v[q] = lv; }); });
+  }
+  return v;
+}
+function imGrid() {                                         // 北京及周边 0.01° 网格级别（亚像素 + 合并碎块），按配准缓存
+  imGlobal(); if (IM.grid) return IM.grid;
+  const B = IM_BB, nx = Math.round((B.e - B.w) / B.d), ny = Math.round((B.n - B.s) / B.d), v = new Int8Array(nx * ny);
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) v[j * nx + i] = imLevelAt(B.w + (i + .5) * B.d, B.n - (j + .5) * B.d);
+  const cell = 111.32 * Math.cos(40 * Math.PI / 180) * B.d * 110.57 * B.d;
+  return (IM.grid = { v: imMerge(v, nx, ny, Math.ceil(IM_MERGE_KM2 / cell)), nx, ny });
 }
 imGo.onclick = () => {
   if (!IM.img || !IM.A) return;
-  imGlobal();
-  const B = IM_BB, nx = Math.round((B.e - B.w) / B.d), ny = Math.round((B.n - B.s) / B.d), cls = new Int8Array(nx * ny), bj = new Uint8Array(nx * ny), src = new Set();
+  const gd = imGrid();                                       // 裁剪：全图识别 → 亚像素网格 → 合并碎块（与原因层历史图同一规则）
+  const B = IM_BB, nx = gd.nx, ny = gd.ny, cls = gd.v.slice(), bj = new Uint8Array(nx * ny), src = new Set();
   let nb = 0, nbU = 0, nbOut = 0;
   for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
     const lng = B.w + (i + .5) * B.d, lat = B.n - (j + .5) * B.d, c = imSample(lng, lat), k = j * nx + i;
-    const q = c ? c[4] * IM.w + c[3] : -1;                  // 裁剪：取全图识别结果；够大的最高一级
-    let v = c ? 0 : -2; if (c) for (let lv = Math.min(6, IM.G[q]); lv >= 1; lv--) if (IM.big[lv][q]) { v = lv; break; }
-    cls[k] = v;
+    const q = c ? c[4] * IM.w + c[3] : -1;
     if (D && D.boundary && districtOf(lat, lng)) { bj[k] = 1; nb++; if (c && IM.G0[q] === -1) nbU++; if (!c) nbOut++; if (c) src.add(c[3] + ',' + c[4]); }
   }
   if (nbOut > nb * 0.5) { imOut.innerHTML = '<span style="color:#c0392b">北京大部分不在这张图的范围内，请检查配准</span>'; return; }
@@ -2786,7 +2918,7 @@ imGo.onclick = () => {
   const bjc = [0, 0, 0, 0, 0, 0, 0]; for (let k = 0; k < cls.length; k++) if (bj[k] && cls[k] >= 0) bjc[cls[k]]++;
   const warn = [];
   if (npx < 200) warn.push(`北京市域在图上只有约 ${npx} 个像素，雨区边界很粗，只适合看大致落区；需要细节时请对照原图手绘`);
-  if (nbU > nb * 0.3) warn.push(`北京市域约 ${Math.round(nbU / nb * 100)}% 被文字、界线等压住；只补了 3 像素以内的细缝，其余按无雨处理，必要时对照原图手绘`);
+  if (nbU > nb * 0.3) warn.push(`北京市域约 ${Math.round(nbU / nb * 100)}% 被文字、界线等压住；只补了 20 像素以内的缝，其余按无雨处理，必要时对照原图手绘`);
   const rings = []; let dropped = 0, holes = 0;
   for (let k = 1; k <= 6; k++) {
     const m = new Uint8Array(nx * ny); let any = false; for (let q = 0; q < m.length; q++) if (cls[q] >= k) { m[q] = 1; any = true; }
@@ -2876,19 +3008,17 @@ function scRainMap(rm) {                                   // 返回 HTML，并�
   }
   if (isLive() && window.FLOOD_FC) setTimeout(afDraw0, 0);     // 预览开 / 关后刷新左侧图层
   const ds = Object.entries(rm.districts).sort((a, b) => b[1] - a[1]);
-  const leg = ST.map(([t, c], i) => `<span style="display:inline-block;width:13px;height:9px;background:${c};vertical-align:middle"></span><span style="font-size:11px;margin:0 4px 0 1px">${i + 1 < ST.length ? `${t}–${ST[i + 1][0]}` : `≥${t}`}</span>`).join('') + '<span style="font-size:11px;color:#888"> mm</span>';
   return `<div id="scRm" style="margin-top:8px;border-top:1px solid #e3e8ef;padding-top:6px">`
     + `<div style="font-size:13px;display:flex;align-items:center;gap:6px"><b>降雨量预览</b><button class="btn${SC.rmShow !== false ? ' pri' : ''}" id="scRmShow" style="margin-left:auto;padding:2px 10px" title="在地图上显示 / 隐藏本预览；显示时左侧所选预报的雨量图暂时隐藏，避免两层叠在一起">${SC.rmShow !== false ? '✓ 地图上显示中' : '在地图上显示'}</button></div>`
     + `<div class="nc-note" style="margin:0">提交前的快速估算：雨团在 1 km 网格上叠加出的累计雨量（只算雨量，不跑洪涝模型）</div>`
     + `<div style="font-size:13px;margin-top:2px">全市平均 <b>${rm.city_mean}</b> mm，最大 <b>${rm.max}</b> mm；≥250 mm ${rm.area_km2_ge['250']} km²，≥400 mm ${rm.area_km2_ge['400']} km²</div>`
-    + `<div style="margin-top:3px;line-height:1.6">${leg}</div>`
     + `<details style="font-size:12px;margin-top:2px"${document.body.classList.contains('ui-simple') ? '' : ' open'}><summary style="cursor:pointer;color:#1f5fbf">各区面雨量</summary>`
     + `<div style="columns:2;column-gap:12px">${ds.map(([n, v]) => `<div>${esc(n)} <b>${v}</b> mm</div>`).join('')}</div></details>`
     + ((rm.note || []).length ? `<details class="nc-note keep"><summary style="cursor:pointer">说明</summary>${(rm.note || []).map(x => esc(x) + '；').join('')}正式模拟各区面雨量与预览基本一致，局地最大值会有出入</details>` : '')
     + '</div>';
 }
 async function scPreview() {
-  if (!SC.centers.length) { if (SC.rmOv) { scLayer.removeLayer(SC.rmOv); SC.rmOv = null; } scPrev.innerHTML = '<div class="nc-note">还没有雨团</div>'; return; }
+  if (!SC.centers.length) { cbSet('sc', null); if (SC.rmOv) { scLayer.removeLayer(SC.rmOv); SC.rmOv = null; } scPrev.innerHTML = '<div class="nc-note">还没有雨团</div>'; return; }
   if (!SC.online) { scPrev.innerHTML = '<div class="nc-note">连接本机服务后显示逐小时雨量</div>'; return; }
   let j;
   try { j = await scApi('/api/preview', scGet()); } catch (e) { scPrev.innerHTML = `<div class="nc-note" style="color:#c0392b">${esc(e.message)}</div>`; return; }
@@ -3002,6 +3132,7 @@ function scLoad(id) {
 const SY_DIST = ['东城区', '西城区', '朝阳区', '丰台区', '石景山区', '海淀区', '门头沟区', '房山区', '通州区', '顺义区', '昌平区', '大兴区', '怀柔区', '平谷区', '密云区', '延庆区'];
 SC.syRows = (SC.d.sy_rows || [{ t: 'area', d: '房山区', lo: 150, hi: 200, off: 0 }]);
 function scSetMode(m) {
+  if (SC.mode !== m) { scSetPick(false); scPolyEnd(false); }
   SC.mode = m; [...scMode.children].forEach(b => b.classList.toggle('on', b.dataset.m === m));
   scSyn.style.display = m === 'synth' ? '' : 'none'; scSec.classList.toggle('synth', m === 'synth');
   scObs.style.display = m === 'obs' ? '' : 'none'; scSec.classList.toggle('obsm', m === 'obs');
@@ -3796,18 +3927,19 @@ async function vecGet(key, src = VEC_FILES[key]) {
   if (!VEC.loading[key]) VEC.loading[key] = vecLoad(key, src).then(V => VEC.cache[key] = vecMake(V)).finally(() => { delete VEC.loading[key]; });
   return VEC.loading[key];
 }
+function vecColorbar(V) {
+  const kind = V.kind || 'flood';
+  return { t: VEC_KINDS[kind], u: kind === 'risk' ? '级' : kind === 'rain' ? 'mm' : 'm',
+    steps: V.levels.map((lv, i) => [lv, kind === 'flood' ? VEC_COLORS[lv] : V.colors[i]]) };
+}
 function vecInfoHtml(b) {
   const V = b.V, m = V.meta, li = k => b.by[k].map(p => `<a href="#" data-n="${esc(p.name)}">${esc(p.name)}</a>`).join('、') || '无';
-  const lg = unit => `<div class="legend">${V.levels.map((lv, i) => `<div><i style="background:${V.colors[i]}"></i>${unit === '级' ? `${lv} 级` : i + 1 < V.levels.length ? `${lv} – ${V.levels[i + 1]} mm` : `≥ ${lv} mm`}`
-    + `<span class="km2">${V.layers[i].f.length ? '' : '无'}</span></div>`).join('')}</div>`;
   const tail = `去掉 ${m.min_patch_hm2} hm² 以下碎斑、${m.smoothing}；100 m 栅格转面，平滑只改善显示，面积统计以栅格为准。结果未校准。`;
-  if (V.kind === 'risk') return lg('级')
-    + `<div style="margin-top:4px"><b style="color:#c0392b">≥ ${m.hot} 级面内 ${b.by.in.length} 处</b>：${li('in')}</div>`
+  if (V.kind === 'risk') return `<div style="margin-top:4px"><b style="color:#c0392b">≥ ${m.hot} 级面内 ${b.by.in.length} 处</b>：${li('in')}</div>`
     + `<div><b style="color:#e67e22">${m.near_m} m 内 ${b.by.near.length} 处</b>：${li('near')}</div>`
     + `<div class="nc-note">危险性（逐时同时刻，水深级、流速级、加权指数级三项取最高），分级面嵌套显示（≥ 各级下限）；不含下切河道、水域与闭洼。${tail}超阈名单仍按文物 50 m 内栅格判定。</div>`;
-  if (V.kind === 'rain') return lg('mm') + `<div class="nc-note">${esc(m.source)}。累计雨量分级面（≥ 各级下限）；北京市界外不显示。${tail}</div>`;
-  return `<div class="legend">${V.levels.map((lv, i) => `<div><i style="background:${VEC_COLORS[lv]}"></i>${i + 1 < V.levels.length ? `${lv} – ${V.levels[i + 1]}` : `≥ ${lv}`} m</div>`).join('')}</div>`
-    + `<div style="margin-top:4px"><b style="color:#c0392b">被淹 ${b.by.in.length} 处</b>：${li('in')}</div>`
+  if (V.kind === 'rain') return `<div class="nc-note">${esc(m.source)}。累计雨量分级面（≥ 各级下限）；北京市界外不显示。${tail}</div>`;
+  return `<div style="margin-top:4px"><b style="color:#c0392b">被淹 ${b.by.in.length} 处</b>：${li('in')}</div>`
     + `<div><b style="color:#e67e22">${m.near_m} m 内被淹 ${b.by.near.length} 处</b>：${li('near')}</div>`
     + `<div class="nc-note">全过程最大淹没范围（水深 ≥ 0.15 m），25 m 模型结果转面：去掉 ${m.min_patch_hm2} hm² 以下碎斑、轻度平滑；不含下切河道、水域与闭洼；按区筛选不裁剪。边界精度仍受 25 m 网格限制，平滑只改善显示；面积统计以栅格为准。结果未校准，不代表真实淹没或文物风险等级。线状、面状文物仍按单点判定。</div>`;
 }
@@ -3839,6 +3971,7 @@ async function vecApply(useFt) {                          // render 末尾调用
   if (request !== VEC.request) return false;              // 加载期间取消、换年份或换栏目后不挂载旧图层
   Object.assign(VEC, b, { key });
   vecOp(+opacity.value); b.layer.addTo(map); b.mk.addTo(map);
+  cbSet('hist', vecColorbar(b.V));
   vecInfo.innerHTML = vecInfoHtml(b); vecBind(vecInfo);
   legend.innerHTML = '';
   return true;
