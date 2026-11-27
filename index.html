@@ -375,7 +375,7 @@
   <h2 id="infoSc">降雨情景模拟怎么设</h2>
   <dl class="help" style="margin:0">
     <dt>拿不准时</dt><dd>雨团 100 mm、半径 15 km，降雨历时 6 h，北京规范雨型、手册法、重现期自动，雨后再算 12 h</dd>
-    <dt>总雨量</dt><dd>雨团中心在降雨历时内的总雨量。参考国标 GB/T 28592 的 24 h 雨量等级：暴雨 50–99.9 mm，大暴雨 100–249.9 mm，特大暴雨 ≥ 250 mm</dd>
+    <dt>总雨量</dt><dd>圆形雨团中心或多边形雨区内在降雨历时内的总雨量。参考国标 GB/T 28592 的 24 h 雨量等级：暴雨 50–99.9 mm，大暴雨 100–249.9 mm，特大暴雨 ≥ 250 mm</dd>
     <dt>半径</dt><dd>半径处雨量为中心的 10%，1.5 倍半径外不到 1%，圈外基本不下雨。经验上局地强对流约 5–10 km，区域性暴雨约 20–50 km（经验值，不是规范规定）。地图上的细线是等雨量线（mm）</dd>
     <dt>开始 h</dt><dd>相对情景开始的小时数。几个雨团可以错开，模拟移动或先后出现的雨。雨区（手绘、预报图）同一时段重叠处取最大，不同时段雨量相加</dd>
     <dt>分区 Ⅰ / Ⅱ</dt><dd>DB11/T 969—2016 第 3.2.2 条：Ⅰ 区是门头沟、房山、昌平、延庆、怀柔、海淀的部分山区乡镇，其余为 Ⅱ 区。延庆默认 Ⅰ，其余默认 Ⅱ；落在门头沟、房山、昌平、怀柔、海淀时会提示确认</dd>
@@ -385,7 +385,7 @@
     <dt>雨后再算</dt><dd>雨停后继续模拟的时长，让水顺地形和河道流到下游。默认 12 h（降雨历时更长时取降雨历时），最多 24 h；越长运行越久</dd>
     <dt>背景雨</dt><dd>圈外的雨。<b>无</b>：圈外基本无雨；<b>全域均匀</b>：全市统一加一个雨量；<b>最新预报</b>：用某次起报的雨量分布。总雨量取雨团与背景的较大值，雨团中心不变</dd>
     <dt>情景前先下</dt><dd>情景开始前全域均匀下的雨，让土壤先变湿、河道先有水；会明显增加运行时间</dd>
-    <dt>空间扰动</dt><dd>给雨量加约 4 km 尺度的随机起伏，雨团中心、雨区平均仍等于设定值。“无”最光滑，便于对比</dd>
+    <dt>空间扰动</dt><dd>只给圆形雨团加随机起伏（默认约 4 km 尺度），并按中心值校正。每个多边形雨区内处处等于设定值，区外平滑衰减。另选“区内起伏”会给合成后的雨量加上空间纹理</dd>
   </dl>
   </div>
   <h2>数据与局限</h2>
@@ -2630,7 +2630,7 @@ function scAdd(ll) {
   SC.centers.push({ lat: ll.lat, lng: ll.lng, mm: 100, r_km: 15, offset_h: 0, zone: scZoneDefault(ll.lat, ll.lng) }); scDraw();
 }
 function scDraw() {
-  scLayer.clearLayers(); SC.lbl = []; SC.bandPl = []; SC.isoLy = null; SC.rmOv = null;
+  scLayer.clearLayers(); SC.lbl = []; SC.polyLayers = []; SC.isoLy = null; SC.rmOv = null;
   const tb = scTab.tBodies[0]; tb.innerHTML = '';
   scTab.style.display = SC.centers.length ? '' : 'none';
   SC.centers.forEach((c, i) => {
@@ -2638,14 +2638,14 @@ function scDraw() {
     if (c.poly) {                                          // 雨区：实线为边界（区内为设定雨量），拖标签整体平移，拖顶点改形状
       // 2026-11-24：预报图识别的雨区只显示图例雨色，不画边界线和顶点；点它的标签才出边界供修改，再点收起
       const ed = !c.band || SC.vx === c, pl = L.polygon([c.poly, ...(c.holes || [])], { stroke: ed, color: col, weight: 2, fillColor: col, fillOpacity: c.band ? 0 : .16, interactive: false }).addTo(scLayer);   // 内洞：区内无雨 / 少雨块
-      if (c.band) SC.bandPl.push([c, pl]);
+      SC.polyLayers.push([c, pl]);
       if (ed && c.poly.length <= (c.band ? 300 : 80)) c.poly.forEach((p, k) => {
         const h = L.marker(p, { draggable: true, title: '拖动改变雨区边界', icon: L.divIcon({ className: '', iconSize: [10, 10], html: `<div class="scVx" style="border-color:${col}"></div>` }) }).addTo(scLayer);
         h.on('dragend', () => { const q = h.getLatLng(); c.poly[k] = [+q.lat.toFixed(5), +q.lng.toFixed(5)]; [c.lat, c.lng] = scPolyCen(c.poly); if (SC.mode === 'synth') SC.synEdited = true; scDraw(); });
       });
     } else [[1, .07, '4 4'], [.549, .1, null], [.354, .14, null]].forEach(([f, op, da]) =>                // 半径处 10%、0.55R 处 50%、0.35R 处 75%
       L.circle([c.lat, c.lng], { radius: R * f, color: col, weight: f === 1 ? 1.5 : 0, dashArray: da, fillColor: col, fillOpacity: op, interactive: false }).addTo(scLayer));
-    const m = L.marker([c.lat, c.lng], { draggable: true, title: c.band ? '点一下显示 / 收起边界，可改形状；拖动整体平移' : c.poly ? '区内平均为设定雨量；拖动整体平移' : '虚线圈：雨量降到中心的 10%；可拖动', icon: L.divIcon({ className: '', iconSize: null, html: `<div class="scLbl" style="background:${col}">${i + 1} · ${c.mm} mm</div>` }) }).addTo(scLayer);
+    const m = L.marker([c.lat, c.lng], { draggable: true, title: c.band ? '点一下显示 / 收起边界，可改形状；拖动整体平移' : c.poly ? '区内雨量处处等于设定值；拖动整体平移' : '虚线圈：雨量降到中心的 10%；可拖动', icon: L.divIcon({ className: '', iconSize: null, html: `<div class="scLbl" style="background:${col}">${i + 1} · ${c.mm} mm</div>` }) }).addTo(scLayer);
     SC.lbl.push(m); if (c.band) m.on('click', () => { SC.vx = SC.vx === c ? null : c; scDraw(); });
     m.on('dragend', () => { const p = m.getLatLng();
       if (c.poly) { const da = p.lat - c.lat, db = p.lng - c.lng, mv = r => r.map(([a, b]) => [+(a + da).toFixed(5), +(b + db).toFixed(5)]); c.poly = mv(c.poly); if (c.holes) c.holes = c.holes.map(mv); }
@@ -2666,7 +2666,7 @@ function scDraw() {
   scDesW.style.display = scPat.value === 'design' ? '' : 'none';
   scBgMmW.style.display = scBg.value === 'uniform' ? '' : 'none'; scBgRunW.style.display = scBg.value === 'forecast' ? '' : 'none';
   const zh = zoned ? SC.centers.map((c, i) => [i + 1, scDist(c.lat, c.lng)]).filter(([, d]) => /门头沟|房山|昌平|怀柔|海淀/.test(d)) : [];
-  SC.bandPl.sort((a, b) => a[0].mm - b[0].mm).forEach(([, p]) => p.bringToFront()); scBandFill(); scIso(); scHints();   // 雨量大的盖在上面
+  SC.polyLayers.filter(([c]) => c.band).sort((a, b) => a[0].mm - b[0].mm).forEach(([, p]) => p.bringToFront()); scBandFill(); scIso(); scHints();   // 预报图中雨量大的盖在上面
   scZoneHint.textContent = zh.length ? `${zh.map(([i, d]) => `雨团 ${i}（${d}）`).join('、')}：部分乡镇属 Ⅰ 区，请按规范 3.2.2 条确认` : '';
   SC.pvTk = (SC.pvTk || 0) + 1; if (IM && IM.img) imDrawOv();      // 改动后，此前还没返回的预览作废
   scSave(); clearTimeout(SC.prevT); SC.prevT = setTimeout(scPreview, 300);
@@ -2691,22 +2691,28 @@ function scHints() {                                      // 选项下方的一�
 function scHours() {                                      // 累计时长（降雨 + 错开 + 雨后），与正式结果的雨量分级口径相同
   const g = scGet(); return g.rain_hours + Math.max(0, ...g.centers.map(c => +c.offset_h || 0)) + (scLong.checked ? 48 : g.tail_hours);
 }
-function scBandFill() {                                   // 识别雨区的雨色：有降雨量预览或识别叠加图时由它们显示，不重复铺色
-  const op = SC.rmOv || (IM && IM.ov) ? 0 : .6;
-  (SC.bandPl || []).forEach(([c, p]) => { const k = IM_CLS.find(x => x.t === c.band); p.setStyle({ fillColor: k ? `rgb(${k.c[0].join(',')})` : p.options.color, fillOpacity: op }); });
+function scBandFill() {                                   // 预览显示时隐藏编辑面的填色，保留边界与手柄
+  (SC.polyLayers || []).forEach(([c, p]) => {
+    const k = c.band && IM_CLS.find(x => x.t === c.band);
+    const opacity = c.band ? (IM && IM.ov ? 0 : .6) : .16;
+    p.setStyle({ fillColor: k ? `rgb(${k.c[0].join(',')})` : p.options.color, fillOpacity: SC.rmOv ? 0 : opacity });
+  });
 }
-function scContour(v, nx, ny, ll, bg) {                   // 规则格点 v（-1 为范围外）→ 等雨量线，级别与色块分级相同；ll(i, j) 返回经纬度
+function scContour(v, nx, ny, ll, bg, hasPolygons) {      // 规则格点 v（-1 为范围外）→ 等雨量线，ll(i, j) 返回经纬度
   if (SC.isoLy) scLayer.removeLayer(SC.isoLy);
   const ly0 = SC.isoLy = L.layerGroup().addTo(scLayer); let k0 = 0; for (let q = 1; q < v.length; q++) if (v[q] > v[k0]) k0 = q;
   const top = v[k0], ci = k0 % nx, cj = (k0 - ci) / nx;
   const CASES = [[], [[3, 0]], [[0, 1]], [[3, 1]], [[1, 2]], [[3, 2], [0, 1]], [[0, 2]], [[3, 2]], [[2, 3]], [[0, 2]], [[0, 3], [1, 2]], [[1, 2]], [[1, 3]], [[0, 1]], [[0, 3]], []];
-  rainStd(scHours()).map(x => x[0]).filter(l => l >= 1 && l < top * 0.98 && l > bg).forEach(l => {
+  rainStd(scHours()).map(x => x[0]).filter(l => l >= 1 && l > bg && (hasPolygons ? l <= top : l < top * .98)).forEach(l => {
     const segs = [];
+    // 多边形平台按 ≥ 分级，相等端取半格描出平台边界；纯圆形保留原有峰顶过滤与插值。
+    const high = hasPolygons ? v => v >= l : v => v > l;
+    const cross = (a, b) => hasPolygons && (a === l || b === l) ? .5 : (l - a) / (b - a);
     for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) {
       const a = v[j * nx + i], b = v[j * nx + i + 1], c = v[(j + 1) * nx + i + 1], d = v[(j + 1) * nx + i];
-      const k = (a > l) | (b > l) << 1 | (c > l) << 2 | (d > l) << 3;
+      const k = high(a) | high(b) << 1 | high(c) << 2 | high(d) << 3;
       if (!CASES[k].length || a < 0 || b < 0 || c < 0 || d < 0) continue;
-      const e = n => n === 0 ? [i + (l - a) / (b - a), j] : n === 1 ? [i + 1, j + (l - b) / (c - b)] : n === 2 ? [i + (l - d) / (c - d), j + 1] : [i, j + (l - a) / (d - a)];
+      const e = n => n === 0 ? [i + cross(a, b), j] : n === 1 ? [i + 1, j + cross(b, c)] : n === 2 ? [i + cross(d, c), j + 1] : [i, j + cross(a, d)];
       CASES[k].forEach(([p, q]) => segs.push([e(p), e(q)].map(([x, y]) => ll(x, y))));
     }
     if (!segs.length) return;
@@ -2714,7 +2720,7 @@ function scContour(v, nx, ny, ll, bg) {                   // 规则格点 v（-1
     L.polyline(segs, { color: '#fff', weight: 1.5, opacity: .95, interactive: false }).addTo(ly0);
     const dn = ll(0, 1)[0] < ll(0, 0)[0] ? 1 : -1;        // 标签：从最强处向正南（避开雨团名称），放在该雨量线穿过处，各级依次排开
     for (let j = cj; j + dn >= 0 && j + dn < ny; j += dn) { const a = v[j * nx + ci], b = v[(j + dn) * nx + ci];
-      if (a > l && b <= l && b >= 0) { L.marker(ll(ci, j + dn * (a - l) / (a - b)), { interactive: false, icon: L.divIcon({ className: '', iconSize: null, html: `<div class="scIso">${l} mm</div>` }) }).addTo(ly0); break; } }
+      if (high(a) && !high(b) && b >= 0) { L.marker(ll(ci, j + dn * cross(a, b)), { interactive: false, icon: L.divIcon({ className: '', iconSize: null, html: `<div class="scIso">${l} mm</div>` }) }).addTo(ly0); break; } }
   });
 }
 function scIso() {                                        // 等雨量线：没连服务时按与 scenario_rain.py 相同的融合公式 ΣP·g / max(1, Σg) 估算（不含扰动与预报背景）；预览返回后改用预览雨量场
@@ -2739,14 +2745,15 @@ function scIso() {                                        // 等雨量线：没�
   const N = 160, dx = (x1 - x0) / N, dy = (y1 - y0) / N, v = new Float64Array((N + 1) * (N + 1));
   // 2026-11-24：有雨区时按开始时刻分段，段内取最大、段间相加（与 scenario_rain.time_groups 相同）
   const grp = []; let gt = null; const rh = Math.max(+scDur.value, ...SC.centers.map(c => (c.hourly || []).length)), off = k => simp && !SC.centers[k].band ? 0 : +SC.centers[k].offset_h || 0;
-  if (cs.some(c => c.pg)) cs.map((c, k) => k).sort((a, b) => off(a) - off(b)).forEach(k => { if (gt === null || off(k) - gt >= 0.75 * rh) { grp.push([]); gt = off(k); } grp.at(-1).push(cs[k]); });
+  const hasPolygons = cs.some(c => c.pg);
+  if (hasPolygons) cs.map((c, k) => k).sort((a, b) => off(a) - off(b)).forEach(k => { if (gt === null || off(k) - gt >= 0.75 * rh) { grp.push([]); gt = off(k); } grp.at(-1).push(cs[k]); });
   else grp.push(cs);
   for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) {
     const x = x0 + i * dx, y = y0 + j * dy; let T = 0;
     grp.forEach(gc => { let G = 0, S = 0, Q = 0; gc.forEach(c => { if (c.pg) { Q = Math.max(Q, c.P * pw(c, x, y)); return; } const g = Math.exp(-LN10 * ((x - c.x) ** 2 + (y - c.y) ** 2) / (c.R * c.R)); G += g; S += c.P * g; }); T += Math.max(S / Math.max(1, G), Q); });
-    v[j * (N + 1) + i] = Math.max(T, bg);
+    v[j * (N + 1) + i] = Math.max(hasPolygons ? Math.fround(T) : T, bg);   // 后端贡献场为 float32，分级前保持同一平台精度
   }
-  scContour(v, N + 1, N + 1, (i, j) => [c0.lat + (y0 + j * dy) / ky, c0.lng + (x0 + i * dx) / kx], bg);
+  scContour(v, N + 1, N + 1, (i, j) => [c0.lat + (y0 + j * dy) / ky, c0.lng + (x0 + i * dx) / kx], bg, hasPolygons);
 }
 function scBgRuns(runs) {                                 // /api/ping 给出的最新起报
   const cur = scBgRun.value || SC.bgRun;
@@ -3152,15 +3159,17 @@ function imSimp(r) {                                          // 道格拉斯—
   return o.length >= 3 ? o.map(([a, b]) => [+a.toFixed(4), +b.toFixed(4)]) : r.slice(0, 3);
 }
 // ---------- 降雨量预览：提交前在约 1 km 网格估算累计雨量，叠加到地图并列全市、各区面雨量（服务端 rain_preview.py） ----------
-const scRainCol = (v, st) => { let c = null; for (const [t, k] of st) if (v >= t) c = k; return c; };   // 色带：rainSteps(预览最大值)，与正式结果同一算法
+const scRainCol = (v, st) => { let c = null; for (const [t, k] of st) if (v >= t) c = k; return c; };   // 平台取 ≥ 该级的颜色，与等雨量线同口径
 function scRainMap(rm) {                                   // 返回 HTML，并把雨量图加到情景图层
   if (SC.rmOv) { scLayer.removeLayer(SC.rmOv); SC.rmOv = null; }
   cbSet('sc', null);
-  if (!rm) return '';
-  if (rm.error) return `<div class="nc-note keep" style="color:#c0392b">${esc(rm.error)}</div>`;
+  if (!rm || rm.error) {
+    scBandFill();
+    return rm ? `<div class="nc-note keep" style="color:#c0392b">${esc(rm.error)}</div>` : '';
+  }
   const ST = rainStd(scHours()), [[b0, b1], [b2, b3]] = rm.bounds;   // 标准分级，按累计时长，与正式结果、等雨量线同一套
   if (rm.regions && SC.centers.length <= 6) SC.centers.forEach((c, i) => SC.lbl[i] && SC.lbl[i].setIcon(L.divIcon({ className: '', iconSize: null, html: `<div class="scLbl" style="background:${SC_COLORS[i % SC_COLORS.length]}">${i + 1} · ${scMmTxt(c, rm.regions[i], rm.centers[i])}</div>` })));
-  scContour(rm.v, rm.w, rm.h, (i, j) => [b2 - (j + .5) * (b2 - b0) / rm.h, b1 + (i + .5) * (b3 - b1) / rm.w], 0);
+  scContour(rm.v, rm.w, rm.h, (i, j) => [b2 - (j + .5) * (b2 - b0) / rm.h, b1 + (i + .5) * (b3 - b1) / rm.w], 0, SC.centers.some(c => c.poly));
   if (SC.rmShow !== false) {
     const cv = document.createElement('canvas'); cv.width = rm.w; cv.height = rm.h;
     const cx = cv.getContext('2d'), im = cx.createImageData(rm.w, rm.h);
@@ -3274,7 +3283,12 @@ function scInfo(r) {
     + `<div>${fmtT(s.start_local)} — ${fmtT(r.stop_local)}（模型提前 ${lead} h ${an.mm > 0 ? `起算，含前期雨 ${an.mm} mm / ${an.hours} h` : '无雨起算'}）：降雨 ${s.rain_hours} h（${SC_PAT[s.pattern] || s.pattern}${s.pattern === 'chicago' ? `，峰值 ${s.peak == null ? '按分区' : Math.round(s.peak * 100) + '%'}` : ''}）+ 雨后 ${s.tail_hours} h</div>`
     + `<details class="scCells"><summary style="cursor:pointer;color:#1f5fbf">雨团设置与合成规则（${s.centers.length} 个雨团）</summary>`
     + (scSynth(r) && (s.source.notes || []).length ? `<div class="nc-note">合成规则：${s.source.notes.filter(syNoCmp).map(esc).join('；')}</div>` : '')
-    + `<div>雨团：${s.centers.map((c, i) => `${i + 1}）${c.label ? esc(c.label) + ' ' : ''}${c.mm} mm / ${c.poly ? `雨区 ${c.poly.length} 个顶点、边缘 ` : ''}${c.r_km} km${c.band ? ` / 预报图 ${esc(c.band)}` : ''}${c.hourly ? ' / 逐小时预报过程' : ''}${c.zone ? ` / ${SC_ZONE[c.zone]} 区` : ''}${c.offset_h ? ` / 第 ${c.offset_h} h 开始` : ''}${c.poly && (s.region_mm_realized || [])[i] != null ? `（区内实际 ${s.region_mm_realized[i]}）` : cm[i] != null ? `（中心实际 ${cm[i]}）` : ''}`).join('；')}</div>`
+    + `<div>雨团：${s.centers.map((c, i) => {
+      const reg = s.region_mm_realized?.[i], value = c.poly && reg != null ? reg : cm[i];
+      const actual = value != null && (!c.poly || Math.abs(value - Math.fround(c.mm)) > .05)
+        ? `（${c.poly && reg != null ? '区内' : '中心'}实际 ${value}）` : '';
+      return `${i + 1}）${c.label ? esc(c.label) + ' ' : ''}${c.mm} mm / ${c.poly ? `雨区 ${c.poly.length} 个顶点、边缘 ` : ''}${c.r_km} km${c.band ? ` / 预报图 ${esc(c.band)}` : ''}${c.hourly ? ' / 逐小时预报过程' : ''}${c.zone ? ` / ${SC_ZONE[c.zone]} 区` : ''}${c.offset_h ? ` / 第 ${c.offset_h} h 开始` : ''}${actual}`;
+    }).join('；')}</div>`
     + (di.length ? `<div>${di.map((d, i) => `雨团 ${i + 1}：${esc(d.note)}`).join('；')}</div><div class="nc-note">雨型只说明形状来源，不是这场雨的频率判断；规范雨型面向城镇建设区，点雨量未做面积折减</div>` : '')
     + (s.background_note ? `<div>背景雨：${esc(s.background_note)}</div>` : '')
     + (s.texture_note ? `<div>区内起伏：${esc(s.texture_note)}</div>` : '')
